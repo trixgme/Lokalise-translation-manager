@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 
 const users: Record<string, string> = {
-  'admin': process.env.ADMIN_PASSWORD || 'admin123',
-  'user': process.env.USER_PASSWORD || 'user123'
+  'admin': process.env.ADMIN_PASSWORD || 'admin',
+  'user': process.env.USER_PASSWORD || 'user'
 }
 
 export async function POST(request: Request) {
