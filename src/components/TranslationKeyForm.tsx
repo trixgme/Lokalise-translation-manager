@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CheckCircle, XCircle, Clock, Circle } from 'lucide-react'
+import TranslationResults from '@/components/TranslationResults'
 
 interface TranslationKeyFormProps {
   onKeyAdded: () => void
@@ -47,6 +48,8 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
   const [showProgress, setShowProgress] = useState(false)
   const [overallProgress, setOverallProgress] = useState(0)
   const progressRef = useRef<HTMLDivElement>(null)
+  const [translationResults, setTranslationResults] = useState<any>(null)
+  const [showResults, setShowResults] = useState(false)
 
   const handlePlatformChange = (platform: string) => {
     setPlatforms(prev => 
@@ -187,6 +190,13 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
                 if (data.step === 'complete') {
                   // Handle completion
                   isCompleted = true
+                  
+                  // Store translation results if available
+                  if (data.translationResults) {
+                    setTranslationResults(data.translationResults)
+                    setShowResults(true)
+                  }
+                  
                   setTimeout(() => {
                     setKeyName('')
                     setDescription('')
@@ -489,6 +499,16 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {showResults && translationResults && (
+        <TranslationResults 
+          results={translationResults}
+          onClose={() => {
+            setShowResults(false)
+            setTranslationResults(null)
+          }}
+        />
       )}
     </div>
   )

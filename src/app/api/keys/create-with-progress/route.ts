@@ -186,13 +186,28 @@ export async function POST(request: NextRequest) {
           const keyId = createdKeys[0].key_id
           sendProgress('creation', 'completed', 100, `Translation key created successfully. (ID: ${keyId})`)
 
-          // Send final completion message
+          // Prepare translation results for display
+          const translationResults = {
+            keyId,
+            keyName,
+            sourceText,
+            translations: keyTranslations
+              .filter(t => t.language_iso !== 'en') // Exclude source language
+              .map(t => ({
+                language: t.language_iso,
+                translation: t.translation,
+                success: true
+              }))
+          }
+
+          // Send final completion message with translation results
           const finalData = JSON.stringify({
             step: 'complete',
             status: 'completed',
             progress: 100,
             keyId,
             translated: useAI,
+            translationResults,
             timestamp: new Date().toISOString()
           })
           safeEnqueue(`data: ${finalData}\n\n`)
