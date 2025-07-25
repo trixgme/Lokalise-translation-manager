@@ -47,12 +47,7 @@ Original: "Hello\\nWorld\\nWelcome"
 Translation should maintain line breaks: "안녕하세요\\n세계\\n환영합니다"
 `
 
-  // 모델별 최적 토큰 수 설정
-  const getMaxTokens = (model: string) => {
-    if (model.includes('gpt-4')) return 4000
-    if (model.includes('gpt-3.5')) return 2000
-    return 2000
-  }
+  // 토큰 제한 제거 - 모델의 최대 가능한 토큰 사용
 
   try {
     const completion = await getOpenAIClient().chat.completions.create({
@@ -67,7 +62,7 @@ Translation should maintain line breaks: "안녕하세요\\n세계\\n환영합�
           content: prompt
         }
       ],
-      max_tokens: getMaxTokens(model),
+      // max_tokens 제거 - 모델 최대 용량 사용
       temperature: 0.3,
     })
 
@@ -88,6 +83,7 @@ export interface BatchTranslationRequest {
   targetLanguages: { code: string; name: string }[]
   context?: string
   model?: string
+  onProgress?: (step: string, progress: number, details?: string) => void
 }
 
 export async function batchTranslateWithOpenAI({
@@ -95,7 +91,8 @@ export async function batchTranslateWithOpenAI({
   sourceLang,
   targetLanguages,
   context,
-  model = 'gpt-4o-mini'
+  model = 'gpt-4o-mini',
+  onProgress
 }: BatchTranslationRequest): Promise<Record<string, string>> {
   const targetLangList = targetLanguages.map(lang => `${lang.code}: ${lang.name}`).join('\n')
   
@@ -125,6 +122,9 @@ Rules:
 6. Ensure all translations are natural and culturally appropriate
 `
 
+  // Progress tracking
+  onProgress?.('번역 대상 언어 준비', 10, `${targetLanguages.length}개 언어로 번역 예정: ${targetLanguages.map(l => l.name).join(', ')}`)
+  
   console.log('=== OpenAI Batch Translation Request ===')
   console.log('Source text:', text)
   console.log('Source language:', sourceLang)
@@ -132,17 +132,14 @@ Rules:
   console.log('Context:', context || 'None')
   console.log('Model:', model)
 
-  // 배치 번역용 더 큰 토큰 수 설정
-  const getBatchMaxTokens = (model: string) => {
-    if (model.includes('gpt-4')) return 12000
-    if (model.includes('gpt-3.5')) return 8000
-    return 8000
-  }
-
-  const maxTokens = getBatchMaxTokens(model)
-  console.log('Max tokens for batch translation:', maxTokens)
+  // 토큰 제한 제거 - 모델의 최대 가능한 토큰 사용
+  console.log('Using maximum available tokens for model:', model)
+  
+  onProgress?.('배치 번역 요청 생성', 20, `모델 최대 용량 사용: ${model}`)
 
   try {
+    onProgress?.('OpenAI API 호출', 40, 'GPT 모델에 번역 요청을 전송하고 있습니다...')
+    
     const completion = await getOpenAIClient().chat.completions.create({
       model,
       messages: [
@@ -155,11 +152,13 @@ Rules:
           content: prompt
         }
       ],
-      max_tokens: maxTokens,
+      // max_tokens 제거 - 모델 최대 용량 사용
       temperature: 0.3,
     })
 
     const response = completion.choices[0]?.message?.content?.trim()
+    onProgress?.('번역 결과 검증', 70, 'OpenAI로부터 번역 결과를 받았습니다. 검증 중...')
+    
     console.log('=== OpenAI Response ===')
     console.log('Raw response:', response)
 
@@ -184,6 +183,8 @@ Rules:
     
     console.log('=== Cleaned Response ===')
     console.log('Cleaned response:', cleanResponse)
+    
+    onProgress?.('번역 데이터 정리', 85, 'JSON 형식의 번역 결과를 처리하고 있습니다...')
 
     // JSON 파싱 시도
     let translations: Record<string, string>
@@ -193,6 +194,8 @@ Rules:
       Object.entries(translations).forEach(([code, translation]) => {
         console.log(`${code}: ${translation}`)
       })
+      
+      onProgress?.('번역 데이터 정리', 95, `${Object.keys(translations).length}개 언어의 번역이 성공적으로 완료되었습니다.`)
     } catch (parseError) {
       console.error('Failed to parse JSON response:', parseError)
       console.error('Cleaned response was:', cleanResponse)
@@ -217,6 +220,7 @@ Rules:
       }
     }
 
+    onProgress?.('번역 데이터 정리', 100, '모든 번역이 완료되었습니다!')
     return translations
   } catch (error) {
     console.error('OpenAI batch translation error:', error)

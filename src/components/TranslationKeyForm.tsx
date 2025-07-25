@@ -22,6 +22,9 @@ interface ProgressStep {
   description: string
   status: 'pending' | 'in_progress' | 'completed' | 'error'
   details?: string
+  progress?: number // 0-100 percentage
+  subSteps?: string[] // detailed sub-steps
+  currentSubStep?: string
 }
 
 const GPT_MODELS = [
@@ -42,6 +45,7 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
   const [selectedModel, setSelectedModel] = useState('gpt-4o-mini')
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([])
   const [showProgress, setShowProgress] = useState(false)
+  const [overallProgress, setOverallProgress] = useState(0)
 
   const handlePlatformChange = (platform: string) => {
     setPlatforms(prev => 
@@ -51,10 +55,27 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
     )
   }
 
-  const updateStepStatus = (stepId: string, status: ProgressStep['status'], details?: string) => {
+  const updateStepStatus = (
+    stepId: string, 
+    status: ProgressStep['status'], 
+    details?: string, 
+    progress?: number,
+    currentSubStep?: string
+  ) => {
     setProgressSteps(prev => prev.map(step => 
-      step.id === stepId ? { ...step, status, details } : step
+      step.id === stepId ? { ...step, status, details, progress, currentSubStep } : step
     ))
+    
+    // Update overall progress
+    setProgressSteps(prev => {
+      const completedSteps = prev.filter(s => s.status === 'completed').length
+      const inProgressStep = prev.find(s => s.status === 'in_progress')
+      const inProgressPercent = inProgressStep?.progress || 0
+      
+      const totalProgress = ((completedSteps + (inProgressPercent / 100)) / prev.length) * 100
+      setOverallProgress(Math.round(totalProgress))
+      return prev
+    })
   }
 
   const initializeProgressSteps = () => {
@@ -78,7 +99,15 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
         id: 'translation',
         title: 'AI 번역 실행',
         description: 'OpenAI를 사용하여 다국어 번역을 생성하는 중...',
-        status: 'pending'
+        status: 'pending',
+        progress: 0,
+        subSteps: [
+          '번역 대상 언어 준비',
+          '배치 번역 요청 생성',
+          'OpenAI API 호출',
+          '번역 결과 검증',
+          '번역 데이터 정리'
+        ]
       })
     }
 
@@ -99,37 +128,11 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
     
     const steps = initializeProgressSteps()
     setProgressSteps(steps)
+    setOverallProgress(0)
 
     try {
-      // Step 1: Validation
-      updateStepStatus('validation', 'in_progress')
-      await new Promise(resolve => setTimeout(resolve, 500)) // Small delay for UX
-      
-      if (!keyName || !sourceText) {
-        updateStepStatus('validation', 'error', '키 이름과 소스 텍스트는 필수입니다.')
-        return
-      }
-      if (platforms.length === 0) {
-        updateStepStatus('validation', 'error', '최소 하나의 플랫폼을 선택해야 합니다.')
-        return
-      }
-      updateStepStatus('validation', 'completed', `입력값이 유효합니다. (플랫폼: ${platforms.join(', ')})`)
-
-      // Step 2: Get languages
-      updateStepStatus('languages', 'in_progress')
-      await new Promise(resolve => setTimeout(resolve, 300))
-      updateStepStatus('languages', 'completed', '지원 언어 목록을 성공적으로 가져왔습니다.')
-
-      // Step 3: AI Translation (if enabled)
-      if (useAI) {
-        updateStepStatus('translation', 'in_progress')
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate translation time
-      }
-
-      // Step 4: Create key
-      updateStepStatus('creation', 'in_progress')
-
-      const response = await fetch('/api/keys', {
+      // Use Server-Sent Events for real-time progress
+      const response = await fetch('/api/keys/create-with-progress', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,37 +148,88 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
         }),
       })
 
-      if (response.ok) {
-        const result = await response.json()
-        
-        if (useAI) {
-          updateStepStatus('translation', 'completed', 'AI 번역이 성공적으로 완료되었습니다.')
-        }
-        updateStepStatus('creation', 'completed', `번역 키가 성공적으로 생성되었습니다. (ID: ${result.keyId})`)
-        
-        // Reset form after success
-        setTimeout(() => {
-          setKeyName('')
-          setDescription('')
-          setSourceText('')
-          setTags('')
-          setPlatforms(['ios', 'android'])
-          setSelectedModel('gpt-4o-mini')
-          setShowProgress(false)
-          setProgressSteps([])
-          onKeyAdded()
-        }, 2000)
-        
-      } else {
-        const error = await response.json()
-        if (useAI) {
-          updateStepStatus('translation', 'error', 'AI 번역 중 오류가 발생했습니다.')
-        }
-        updateStepStatus('creation', 'error', `키 생성 실패: ${error.message}`)
+      if (!response.ok) {
+        throw new Error('Failed to start key creation process')
       }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error('Failed to read response stream')
+      }
+
+      let isCompleted = false
+      
+      while (true) {
+        try {
+          const { done, value } = await reader.read()
+          
+          if (done) break
+
+          const chunk = decoder.decode(value)
+          const lines = chunk.split('\n')
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ') && line.length > 6) {
+              try {
+                const data = JSON.parse(line.substring(6))
+                
+                if (data.step === 'complete') {
+                  // Handle completion
+                  isCompleted = true
+                  setTimeout(() => {
+                    setKeyName('')
+                    setDescription('')
+                    setSourceText('')
+                    setTags('')
+                    setPlatforms(['ios', 'android'])
+                    setSelectedModel('gpt-4o-mini')
+                    setShowProgress(false)
+                    setProgressSteps([])
+                    setOverallProgress(0)
+                    onKeyAdded()
+                  }, 2000)
+                  break
+                } else if (data.step === 'error') {
+                  // Handle error
+                  const currentStep = progressSteps.find(step => step.status === 'in_progress')
+                  if (currentStep) {
+                    updateStepStatus(currentStep.id, 'error', data.details || '예상치 못한 오류가 발생했습니다.')
+                  }
+                  break
+                } else {
+                  // Update progress for specific step
+                  updateStepStatus(
+                    data.step,
+                    data.status,
+                    data.details,
+                    data.progress,
+                    data.currentSubStep
+                  )
+                }
+              } catch (parseError) {
+                console.error('Failed to parse SSE data:', parseError, 'Line:', line)
+              }
+            }
+          }
+          
+          if (isCompleted) break
+        } catch (readError) {
+          console.error('Error reading stream:', readError)
+          break
+        }
+      }
+      
+      // Clean up reader
+      try {
+        reader.releaseLock()
+      } catch (releaseError) {
+        console.error('Error releasing reader lock:', releaseError)
+      }
+      
     } catch (error) {
-      console.error(error)
-      // Mark current step as error
+      console.error('Error during key creation:', error)
       const currentStep = progressSteps.find(step => step.status === 'in_progress')
       if (currentStep) {
         updateStepStatus(currentStep.id, 'error', '예상치 못한 오류가 발생했습니다.')
@@ -329,37 +383,97 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
       {showProgress && (
         <Card>
           <CardHeader>
-            <CardTitle>생성 진행 상황</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>생성 진행 상황</CardTitle>
+              <Badge variant="secondary" className="text-sm font-medium">
+                {overallProgress}% 완료
+              </Badge>
+            </div>
+            <Progress value={overallProgress} className="mt-2" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {progressSteps.map((step, index) => (
-                <div key={step.id} className="flex items-start space-x-3">
-                  {getStepIcon(step.status)}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h4 className={`text-sm font-medium ${
-                        step.status === 'error' ? 'text-destructive' : 
-                        step.status === 'completed' ? 'text-green-600 dark:text-green-400' :
-                        step.status === 'in_progress' ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'
+            <div className="space-y-6">
+              {progressSteps.map((step) => (
+                <div key={step.id} className="space-y-2">
+                  <div className="flex items-start space-x-3">
+                    {getStepIcon(step.status)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h4 className={`text-sm font-medium ${
+                          step.status === 'error' ? 'text-destructive' : 
+                          step.status === 'completed' ? 'text-green-600 dark:text-green-400' :
+                          step.status === 'in_progress' ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'
+                        }`}>
+                          {step.title}
+                        </h4>
+                        <div className="flex items-center space-x-2">
+                          {step.status === 'in_progress' && step.progress !== undefined && (
+                            <Badge variant="outline" className="text-xs">
+                              {step.progress}%
+                            </Badge>
+                          )}
+                          {step.status === 'in_progress' && (
+                            <div className="flex space-x-1">
+                              <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
+                              <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0.1s]"></div>
+                              <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <p className={`text-sm ${
+                        step.status === 'error' ? 'text-destructive/80' : 
+                        step.status === 'completed' ? 'text-green-600/80 dark:text-green-400/80' :
+                        step.status === 'in_progress' ? 'text-blue-600/80 dark:text-blue-400/80' : 'text-muted-foreground'
                       }`}>
-                        {step.title}
-                      </h4>
-                      {step.status === 'in_progress' && (
-                        <div className="flex space-x-1">
-                          <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
-                          <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0.1s]"></div>
-                          <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                        {step.details || step.description}
+                      </p>
+                      
+                      {/* Show current sub-step for in-progress items */}
+                      {step.status === 'in_progress' && step.currentSubStep && (
+                        <p className="text-xs text-blue-500/70 mt-1 italic">
+                          → {step.currentSubStep}
+                        </p>
+                      )}
+                      
+                      {/* Show individual progress bar for steps with progress */}
+                      {step.status === 'in_progress' && step.progress !== undefined && (
+                        <Progress value={step.progress} className="mt-2 h-1" />
+                      )}
+                      
+                      {/* Show sub-steps for translation step */}
+                      {step.id === 'translation' && step.subSteps && step.status === 'in_progress' && (
+                        <div className="mt-3 ml-2 space-y-1">
+                          {step.subSteps.map((subStep, subIndex) => {
+                            const isCurrentStep = step.currentSubStep === subStep
+                            const isCompletedStep = step.progress !== undefined && 
+                              subIndex < Math.floor((step.progress / 100) * step.subSteps!.length)
+                            
+                            return (
+                              <div key={subIndex} className={`flex items-center space-x-2 text-xs ${
+                                isCurrentStep ? 'text-blue-600 dark:text-blue-400 font-medium' :
+                                isCompletedStep ? 'text-green-600 dark:text-green-400' :
+                                'text-muted-foreground'
+                              }`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                  isCurrentStep ? 'bg-blue-500 animate-pulse' :
+                                  isCompletedStep ? 'bg-green-500' :
+                                  'bg-muted-foreground/30'
+                                }`} />
+                                <span>{subStep}</span>
+                                {isCurrentStep && (
+                                  <div className="flex space-x-0.5">
+                                    <div className="w-0.5 h-0.5 bg-blue-500 rounded-full animate-bounce"></div>
+                                    <div className="w-0.5 h-0.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.1s]"></div>
+                                    <div className="w-0.5 h-0.5 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                     </div>
-                    <p className={`text-sm ${
-                      step.status === 'error' ? 'text-destructive/80' : 
-                      step.status === 'completed' ? 'text-green-600/80 dark:text-green-400/80' :
-                      step.status === 'in_progress' ? 'text-blue-600/80 dark:text-blue-400/80' : 'text-muted-foreground'
-                    }`}>
-                      {step.details || step.description}
-                    </p>
                   </div>
                 </div>
               ))}

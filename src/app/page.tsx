@@ -18,8 +18,10 @@ export default function Home() {
         </div>
         
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Lokalise Translation Manager
+          <h1 className="text-3xl font-bold mb-2 relative overflow-hidden">
+            <span className="inline-block bg-gradient-to-r from-red-500 via-yellow-400 via-green-500 via-blue-500 via-purple-600 via-pink-500 to-red-500 bg-[length:300%_100%] bg-clip-text text-transparent animate-gradient-flow">
+              Lokalise Translation Manager
+            </span>
           </h1>
           <p className="text-lg text-muted-foreground">
             AI-powered translation key management

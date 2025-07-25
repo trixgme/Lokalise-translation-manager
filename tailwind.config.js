@@ -64,10 +64,15 @@ module.exports = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "gradient-flow": {
+          "0%": { "background-position": "300% 50%" },
+          "100%": { "background-position": "0% 50%" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "gradient-flow": "gradient-flow 4s linear infinite",
       },
     },
   },
