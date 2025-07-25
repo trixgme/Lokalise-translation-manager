@@ -86,7 +86,7 @@ class LokaliseAPI {
       )
       console.log(`Translation creation/update successful for ${languageIso}:`, response.data)
       return response.data
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Translation creation/update failed for ${languageIso}:`, error.response?.data || error.message)
       throw error
     }

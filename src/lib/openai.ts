@@ -1,12 +1,17 @@
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+let openai: OpenAI | null = null
 
-// API 키 존재 여부 확인
-if (!process.env.OPENAI_API_KEY) {
-  console.error('OPENAI_API_KEY is not set in environment variables')
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY is not set in environment variables')
+    }
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+  }
+  return openai
 }
 
 export interface TranslationRequest {
@@ -50,7 +55,7 @@ Translation should maintain line breaks: "안녕하세요\\n세계\\n환영합�
   }
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model,
       messages: [
         {
@@ -138,7 +143,7 @@ Rules:
   console.log('Max tokens for batch translation:', maxTokens)
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model,
       messages: [
         {
