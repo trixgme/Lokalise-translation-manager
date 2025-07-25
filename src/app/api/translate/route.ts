@@ -37,7 +37,12 @@ export async function POST(request: NextRequest) {
         const keyResult = {
           keyId,
           keyName: key.key_name.web || key.key_name.ios || key.key_name.android,
-          translations: []
+          translations: [] as Array<{
+            language: string;
+            translation: string | null;
+            success: boolean;
+            error?: string;
+          }>
         }
 
         for (const targetLang of targetLangs) {
