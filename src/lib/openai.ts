@@ -123,7 +123,7 @@ Rules:
 `
 
   // Progress tracking
-  onProgress?.('번역 대상 언어 준비', 10, `${targetLanguages.length}개 언어로 번역 예정: ${targetLanguages.map(l => l.name).join(', ')}`)
+  onProgress?.('Preparing target languages', 10, `Planning translation for ${targetLanguages.length} languages: ${targetLanguages.map(l => l.name).join(', ')}`)
   
   console.log('=== OpenAI Batch Translation Request ===')
   console.log('Source text:', text)
@@ -135,10 +135,10 @@ Rules:
   // 토큰 제한 제거 - 모델의 최대 가능한 토큰 사용
   console.log('Using maximum available tokens for model:', model)
   
-  onProgress?.('배치 번역 요청 생성', 20, `모델 최대 용량 사용: ${model}`)
+  onProgress?.('Creating batch translation request', 20, `Using maximum model capacity: ${model}`)
 
   try {
-    onProgress?.('OpenAI API 호출', 40, 'GPT 모델에 번역 요청을 전송하고 있습니다...')
+    onProgress?.('Calling OpenAI API', 40, 'Sending translation request to GPT model...')
     
     const completion = await getOpenAIClient().chat.completions.create({
       model,
@@ -157,7 +157,7 @@ Rules:
     })
 
     const response = completion.choices[0]?.message?.content?.trim()
-    onProgress?.('번역 결과 검증', 70, 'OpenAI로부터 번역 결과를 받았습니다. 검증 중...')
+    onProgress?.('Validating translation results', 70, 'Received translation results from OpenAI. Validating...')
     
     console.log('=== OpenAI Response ===')
     console.log('Raw response:', response)
@@ -184,7 +184,7 @@ Rules:
     console.log('=== Cleaned Response ===')
     console.log('Cleaned response:', cleanResponse)
     
-    onProgress?.('번역 데이터 정리', 85, 'JSON 형식의 번역 결과를 처리하고 있습니다...')
+    onProgress?.('Processing translation data', 85, 'Processing JSON format translation results...')
 
     // JSON 파싱 시도
     let translations: Record<string, string>
@@ -195,7 +195,7 @@ Rules:
         console.log(`${code}: ${translation}`)
       })
       
-      onProgress?.('번역 데이터 정리', 95, `${Object.keys(translations).length}개 언어의 번역이 성공적으로 완료되었습니다.`)
+      onProgress?.('Processing translation data', 95, `Translation successfully completed for ${Object.keys(translations).length} languages.`)
     } catch (parseError) {
       console.error('Failed to parse JSON response:', parseError)
       console.error('Cleaned response was:', cleanResponse)
@@ -220,7 +220,7 @@ Rules:
       }
     }
 
-    onProgress?.('번역 데이터 정리', 100, '모든 번역이 완료되었습니다!')
+    onProgress?.('Processing translation data', 100, 'All translations completed successfully!')
     return translations
   } catch (error) {
     console.error('OpenAI batch translation error:', error)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -28,10 +28,10 @@ interface ProgressStep {
 }
 
 const GPT_MODELS = [
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (안정적)', description: '가장 안정적이고 저렴한 모델' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (경제적)', description: '비용 효율적인 소형 모델' },
-  { value: 'gpt-4o', label: 'GPT-4o (멀티모달)', description: '빠르고 강력한 GPT-4 모델' },
-  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (고성능)', description: '고성능 범용 모델' },
+  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Stable)', description: 'Most stable and cost-effective model' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Economic)', description: 'Cost-efficient compact model' },
+  { value: 'gpt-4o', label: 'GPT-4o (Multimodal)', description: 'Fast and powerful GPT-4 model' },
+  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (High Performance)', description: 'High-performance general-purpose model' },
 ]
 
 export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormProps) {
@@ -46,6 +46,7 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([])
   const [showProgress, setShowProgress] = useState(false)
   const [overallProgress, setOverallProgress] = useState(0)
+  const progressRef = useRef<HTMLDivElement>(null)
 
   const handlePlatformChange = (platform: string) => {
     setPlatforms(prev => 
@@ -82,14 +83,14 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
     const steps: ProgressStep[] = [
       {
         id: 'validation',
-        title: '입력값 검증',
-        description: '번역 키 정보와 플랫폼 설정을 확인하는 중...',
+        title: 'Input Validation',
+        description: 'Validating translation key information and platform settings...',
         status: 'pending'
       },
       {
         id: 'languages',
-        title: '지원 언어 조회',
-        description: 'Lokalise에서 지원하는 언어 목록을 가져오는 중...',
+        title: 'Language Lookup',
+        description: 'Fetching supported language list from Lokalise...',
         status: 'pending'
       }
     ]
@@ -97,24 +98,24 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
     if (useAI) {
       steps.push({
         id: 'translation',
-        title: 'AI 번역 실행',
-        description: 'OpenAI를 사용하여 다국어 번역을 생성하는 중...',
+        title: 'AI Translation',
+        description: 'Generating multilingual translations using OpenAI...',
         status: 'pending',
         progress: 0,
         subSteps: [
-          '번역 대상 언어 준비',
-          '배치 번역 요청 생성',
-          'OpenAI API 호출',
-          '번역 결과 검증',
-          '번역 데이터 정리'
+          'Preparing target languages',
+          'Creating batch translation request',
+          'Calling OpenAI API',
+          'Validating translation results',
+          'Processing translation data'
         ]
       })
     }
 
     steps.push({
       id: 'creation',
-      title: '번역 키 생성',
-      description: 'Lokalise에 번역 키와 번역을 저장하는 중...',
+      title: 'Translation Key Creation',
+      description: 'Saving translation key and translations to Lokalise...',
       status: 'pending'
     })
 
@@ -129,6 +130,14 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
     const steps = initializeProgressSteps()
     setProgressSteps(steps)
     setOverallProgress(0)
+    
+    // Auto scroll to progress section
+    setTimeout(() => {
+      progressRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      })
+    }, 100)
 
     try {
       // Use Server-Sent Events for real-time progress
@@ -195,7 +204,7 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
                   // Handle error
                   const currentStep = progressSteps.find(step => step.status === 'in_progress')
                   if (currentStep) {
-                    updateStepStatus(currentStep.id, 'error', data.details || '예상치 못한 오류가 발생했습니다.')
+                    updateStepStatus(currentStep.id, 'error', data.details || 'An unexpected error occurred.')
                   }
                   break
                 } else {
@@ -232,7 +241,7 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
       console.error('Error during key creation:', error)
       const currentStep = progressSteps.find(step => step.status === 'in_progress')
       if (currentStep) {
-        updateStepStatus(currentStep.id, 'error', '예상치 못한 오류가 발생했습니다.')
+        updateStepStatus(currentStep.id, 'error', 'An unexpected error occurred.')
       }
     } finally {
       setIsLoading(false)
@@ -356,7 +365,7 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
                   <Label htmlFor="gptModel">GPT Model</Label>
                   <Select value={selectedModel} onValueChange={setSelectedModel} disabled={isLoading}>
                     <SelectTrigger>
-                      <SelectValue placeholder="모델을 선택하세요" />
+                      <SelectValue placeholder="Select a model" />
                     </SelectTrigger>
                     <SelectContent>
                       {GPT_MODELS.map((model) => (
@@ -381,12 +390,12 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
       </Card>
 
       {showProgress && (
-        <Card>
+        <Card ref={progressRef}>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>생성 진행 상황</CardTitle>
+              <CardTitle>Creation Progress</CardTitle>
               <Badge variant="secondary" className="text-sm font-medium">
-                {overallProgress}% 완료
+                {overallProgress}% Complete
               </Badge>
             </div>
             <Progress value={overallProgress} className="mt-2" />

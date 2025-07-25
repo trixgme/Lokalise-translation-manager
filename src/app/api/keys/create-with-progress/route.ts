@@ -57,27 +57,27 @@ export async function POST(request: NextRequest) {
           const { keyName, description, sourceText, tags, platforms, useAI, gptModel } = requestData
 
           if (!keyName || !sourceText) {
-            sendProgress('validation', 'error', 0, '키 이름과 소스 텍스트는 필수입니다.')
+            sendProgress('validation', 'error', 0, 'Key name and source text are required.')
             safeClose()
             return
           }
 
           if (!platforms || platforms.length === 0) {
-            sendProgress('validation', 'error', 0, '최소 하나의 플랫폼을 선택해야 합니다.')
+            sendProgress('validation', 'error', 0, 'At least one platform must be selected.')
             safeClose()
             return
           }
 
           // Step 1: Validation
-          sendProgress('validation', 'in_progress', 50, '입력값을 검증하고 있습니다...')
+          sendProgress('validation', 'in_progress', 50, 'Validating input values...')
           await new Promise(resolve => setTimeout(resolve, 500))
-          sendProgress('validation', 'completed', 100, `입력값이 유효합니다. (플랫폼: ${platforms.join(', ')})`)
+          sendProgress('validation', 'completed', 100, `Input values are valid. (Platforms: ${platforms.join(', ')})`)
 
           // Step 2: Get languages
-          sendProgress('languages', 'in_progress', 50, 'Lokalise에서 지원하는 언어 목록을 가져오고 있습니다...')
+          sendProgress('languages', 'in_progress', 50, 'Fetching supported language list from Lokalise...')
           const lokalise = createLokaliseClient()
           const languages = await lokalise.getLanguages()
-          sendProgress('languages', 'completed', 100, `${languages.length}개 언어를 확인했습니다.`)
+          sendProgress('languages', 'completed', 100, `Found ${languages.length} supported languages.`)
 
           // Initialize translations with English source
           let keyTranslations = [{
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
           // Step 3: AI Translation (if enabled)
           if (useAI) {
-            sendProgress('translation', 'in_progress', 0, '번역 과정을 시작합니다...', '번역 대상 언어 준비')
+            sendProgress('translation', 'in_progress', 0, 'Starting translation process...', 'Preparing target languages')
             
             try {
               const targetLanguagesForBatch = languages.filter(lang => lang.lang_iso !== 'en').map(lang => ({
@@ -117,11 +117,11 @@ export async function POST(request: NextRequest) {
                 })
               }
               
-              sendProgress('translation', 'completed', 100, `${keyTranslations.length - 1}개 언어로 번역이 완료되었습니다.`)
+              sendProgress('translation', 'completed', 100, `Translation completed for ${keyTranslations.length - 1} languages.`)
               
             } catch (translationError) {
               console.warn('Batch translation failed, trying individual translations:', translationError)
-              sendProgress('translation', 'in_progress', 50, '배치 번역이 실패했습니다. 개별 번역으로 진행합니다...', '개별 번역 준비')
+              sendProgress('translation', 'in_progress', 50, 'Batch translation failed. Proceeding with individual translations...', 'Preparing individual translation')
               
               try {
                 const targetLanguagesForIndividual = languages.filter(lang => lang.lang_iso !== 'en').slice(0, 5)
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
                   const progress = 50 + ((i + 1) / targetLanguagesForIndividual.length) * 50
                   
                   try {
-                    sendProgress('translation', 'in_progress', progress, `${lang.lang_iso} 번역 중...`, `${lang.lang_iso}로 개별 번역`)
+                    sendProgress('translation', 'in_progress', progress, `Translating to ${lang.lang_iso}...`, `Individual translation to ${lang.lang_iso}`)
                     
                     const translation = await translateWithOpenAI({
                       text: sourceText,
@@ -147,13 +147,13 @@ export async function POST(request: NextRequest) {
                     })
                   } catch (individualError) {
                     console.error(`Individual translation failed for ${lang.lang_iso}:`, individualError)
-                    sendProgress('translation', 'in_progress', progress, `${lang.lang_iso} 번역 실패, 다음 언어로 진행합니다.`)
+                    sendProgress('translation', 'in_progress', progress, `Translation to ${lang.lang_iso} failed, proceeding to next language.`)
                   }
                 }
                 
-                sendProgress('translation', 'completed', 100, `개별 번역으로 ${keyTranslations.length - 1}개 언어 번역 완료`)
+                sendProgress('translation', 'completed', 100, `Individual translation completed for ${keyTranslations.length - 1} languages`)
               } catch (fallbackError) {
-                sendProgress('translation', 'error', 0, '개별 번역도 실패했습니다.')
+                sendProgress('translation', 'error', 0, 'Individual translation also failed.')
                 safeClose()
                 return
               }
@@ -161,11 +161,11 @@ export async function POST(request: NextRequest) {
           }
 
           // Step 4: Create key in Lokalise
-          sendProgress('creation', 'in_progress', 25, 'Lokalise에 번역 키를 생성하고 있습니다...')
+          sendProgress('creation', 'in_progress', 25, 'Creating translation key in Lokalise...')
           
           const tagArray = tags ? tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0) : []
           
-          sendProgress('creation', 'in_progress', 50, '번역 데이터를 준비하고 있습니다...')
+          sendProgress('creation', 'in_progress', 50, 'Preparing translation data...')
           
           const createdKeys = await lokalise.createKeys({
             keys: [{
@@ -178,13 +178,13 @@ export async function POST(request: NextRequest) {
           })
 
           if (!createdKeys || createdKeys.length === 0) {
-            sendProgress('creation', 'error', 0, '키 생성에 실패했습니다.')
+            sendProgress('creation', 'error', 0, 'Failed to create translation key.')
             safeClose()
             return
           }
 
           const keyId = createdKeys[0].key_id
-          sendProgress('creation', 'completed', 100, `번역 키가 성공적으로 생성되었습니다. (ID: ${keyId})`)
+          sendProgress('creation', 'completed', 100, `Translation key created successfully. (ID: ${keyId})`)
 
           // Send final completion message
           const finalData = JSON.stringify({
