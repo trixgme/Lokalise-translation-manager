@@ -36,11 +36,12 @@ ${context ? `Context: ${context}` : ''}
 Text to translate: "${text}"
 
 IMPORTANT FORMATTING RULES:
-1. If the original text contains line breaks (\\n), preserve them in your translation where they make sense for the target language
-2. Maintain the same paragraph structure and formatting as the original
-3. Ensure line breaks appear at natural sentence or phrase boundaries in the target language
-4. Only provide the translation without any additional explanation
-5. Make sure the translation is natural and appropriate for the target language and culture
+1. The phrase to be translated will be shown to users in a mobile app. The app is a financial application that allows users to send money to each other.
+2. If the original text contains line breaks (\\n), preserve them in your translation where they make sense for the target language
+3. Maintain the same paragraph structure and formatting as the original
+4. Ensure line breaks appear at natural sentence or phrase boundaries in the target language
+5. Only provide the translation without any additional explanation
+6. Make sure the translation is natural and appropriate for the target language and culture
 
 Example:
 Original: "Hello\\nWorld\\nWelcome"
