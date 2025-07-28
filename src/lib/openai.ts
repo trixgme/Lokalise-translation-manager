@@ -36,13 +36,8 @@ ${context ? `Context: ${context}` : ''}
 Text to translate: "${text}"
 
 IMPORTANT FORMATTING RULES:
-1. Please translate the following text into target language using a warm, friendly, and conversational tone that feels approachable and natural to users of a mobile money transfer app. Avoid overly formal, stiff, or literal translations. Use everyday expressions that sound like they come from a helpful and caring service speaking directly to the user.
-2. The phrase to be translated will be shown to users in a mobile app. The app is a financial application that allows users to send money to each other.
-3. If the original text contains line breaks (\\n), preserve them in your translation where they make sense for the target language
-4. Maintain the same paragraph structure and formatting as the original
-5. Ensure line breaks appear at natural sentence or phrase boundaries in the target language
-6. Only provide the translation without any additional explanation
-7. Make sure the translation is natural and appropriate for the target language and culture
+1. If the original text contains line breaks (\\n), preserve them in your translation where they make sense for the target language
+2. Ensure line breaks appear at natural sentence or phrase boundaries in the target language
 
 Example:
 Original: "Hello\\nWorld\\nWelcome"
