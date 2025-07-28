@@ -38,6 +38,9 @@ Text to translate: "${text}"
 IMPORTANT FORMATTING RULES:
 1. If the original text contains line breaks (\\n), preserve them in your translation where they make sense for the target language
 2. Ensure line breaks appear at natural sentence or phrase boundaries in the target language
+3. Use natural, everyday expressions that people would actually use in real conversations.
+Avoid literal or robotic translations.
+4. Make sure each translation sounds fluent and appropriate for casual spoken use, not formal or academic settings.
 
 Example:
 Original: "Hello\\nWorld\\nWelcome"
