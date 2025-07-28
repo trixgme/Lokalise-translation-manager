@@ -27,7 +27,7 @@ export async function translateWithOpenAI({
   sourceLang,
   targetLang,
   context,
-  model = 'gpt-4o-mini'
+  model = 'gpt-4o'
 }: TranslationRequest): Promise<string> {
   const prompt = `
 Translate the following text from ${sourceLang} to ${targetLang}.
@@ -93,7 +93,7 @@ export async function batchTranslateWithOpenAI({
   sourceLang,
   targetLanguages,
   context,
-  model = 'gpt-4o-mini',
+  model = 'gpt-4o',
   onProgress
 }: BatchTranslationRequest): Promise<Record<string, string>> {
   const targetLangList = targetLanguages.map(lang => `${lang.code}: ${lang.name}`).join('\n')
