@@ -36,10 +36,10 @@ ${context ? `Context: ${context}` : ''}
 Text to translate: "${text}"
 
 CRITICAL FORMATTING REQUIREMENTS:
-1. **Line Break Preservation**: If the source text contains line breaks (\\n), you MUST preserve them in your translation
-2. **Natural Flow**: Position line breaks at natural sentence or phrase boundaries in the target language
+1. **Line Break Preservation**: ONLY if the source text contains line breaks (\\n), preserve them in your translation. If the source text has NO line breaks, your translation must also have NO line breaks.
+2. **Natural Flow**: When line breaks exist in source, position them at natural sentence or phrase boundaries in the target language
 3. **Paragraph Structure**: Maintain the same paragraph structure and formatting as the original text
-4. **Language-Specific Adaptation**: Some languages may need different line break positions for optimal readability
+4. **No Extra Line Breaks**: Do NOT add line breaks if the source text doesn't have them
 
 TRANSLATION QUALITY RULES:
 - Use natural, conversational expressions that native speakers would actually use
@@ -64,7 +64,7 @@ Korean: "아래 버튼을\\n클릭하여\\n계속하세요"
       messages: [
         {
           role: 'system',
-          content: 'You are a professional translator specializing in preserving formatting while delivering natural translations. CRITICAL: You MUST preserve all line breaks (\\n) from the source text in your translation, positioning them at natural boundaries in the target language for optimal readability and flow.'
+          content: 'You are a professional translator specializing in accurate formatting preservation. CRITICAL: ONLY preserve line breaks (\\n) if they exist in the source text. If the source text has no line breaks, your translation must also have no line breaks. Never add line breaks that are not in the original text.'
         },
         {
           role: 'user',
@@ -114,11 +114,11 @@ ${targetLangList}
 ${context ? `Context: ${context}` : ''}
 
 MANDATORY LINE BREAK PRESERVATION RULES:
-1. **PRESERVE ALL LINE BREAKS**: If the source text contains line breaks (\\n), you MUST preserve them in ALL translations
-2. **Natural Positioning**: Position line breaks at natural sentence or phrase boundaries in each target language
+1. **CONDITIONAL PRESERVATION**: ONLY preserve line breaks (\\n) if they exist in the source text. If source has NO line breaks, translations must also have NO line breaks.
+2. **Natural Positioning**: When line breaks exist in source, position them at natural sentence or phrase boundaries in each target language
 3. **Paragraph Structure**: Maintain identical paragraph structure and formatting as the original text
-4. **Language-Specific Flow**: Adapt line break positions for optimal readability in each target language while preserving the original structure
-5. **Consistent Formatting**: All translations must have the same number of line breaks as the source text
+4. **No Extra Line Breaks**: Never add line breaks that don't exist in the source text
+5. **Exact Count Matching**: All translations must have the exact same number of line breaks as the source text (including zero)
 
 TRANSLATION QUALITY REQUIREMENTS:
 - Use natural, conversational expressions native speakers would use
@@ -165,7 +165,7 @@ RESPONSE RULES:
       messages: [
         {
           role: 'system',
-          content: 'You are a professional translator specializing in preserving formatting. You MUST respond with ONLY a valid JSON object without any markdown formatting, code blocks, or additional text. Your response should start with { and end with }. CRITICAL: You MUST preserve ALL line breaks (\\n) from the source text in every translation, positioning them at natural boundaries in each target language for optimal readability.'
+          content: 'You are a professional translator specializing in accurate formatting preservation. You MUST respond with ONLY a valid JSON object without any markdown formatting, code blocks, or additional text. Your response should start with { and end with }. CRITICAL: ONLY preserve line breaks (\\n) if they exist in the source text. If source has no line breaks, translations must also have no line breaks. Never add extra line breaks.'
         },
         {
           role: 'user',
