@@ -29,7 +29,7 @@ LOKALISE_PROJECT_ID=your_project_id_here
 # OpenAI Configuration (fallback for translation)
 OPENAI_API_KEY=your_openai_api_key_here
 
-# Next.js Configuration  
+# Next.js Configuration
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
@@ -46,7 +46,7 @@ This is a Next.js 15 application that integrates with Lokalise API for translati
 ### Key Directories
 
 - `src/lib/lokalise.ts` - Lokalise API client with full CRUD operations
-- `src/lib/openai.ts` - OpenAI integration for fallback translation
+- `src/lib/openai.ts` - OpenAI integration for fallback translation (default model: GPT-4o)
 - `src/types/lokalise.ts` - TypeScript definitions for Lokalise API responses
 - `src/app/api/` - API routes for keys, translation, and language management
 
@@ -55,7 +55,7 @@ This is a Next.js 15 application that integrates with Lokalise API for translati
 The application uses a hybrid translation approach:
 
 1. **Primary**: Lokalise AI auto-translation via `translateKeys()`
-2. **Fallback**: OpenAI GPT-3.5-turbo when Lokalise AI fails
+2. **Fallback**: OpenAI GPT-4o when Lokalise AI fails
 3. **Manual**: Direct translation updates via `updateTranslation()`
 
 Key API endpoints:
