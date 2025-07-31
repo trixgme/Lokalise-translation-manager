@@ -35,16 +35,25 @@ ${context ? `Context: ${context}` : ''}
 
 Text to translate: "${text}"
 
-IMPORTANT FORMATTING RULES:
-1. If the original text contains line breaks (\\n), preserve them in your translation where they make sense for the target language
-2. Ensure line breaks appear at natural sentence or phrase boundaries in the target language
-3. Use natural, everyday expressions that people would actually use in real conversations.
-Avoid literal or robotic translations.
-4. Make sure each translation sounds fluent and appropriate for casual spoken use, not formal or academic settings.
+CRITICAL FORMATTING REQUIREMENTS:
+1. **Line Break Preservation**: If the source text contains line breaks (\\n), you MUST preserve them in your translation
+2. **Natural Flow**: Position line breaks at natural sentence or phrase boundaries in the target language
+3. **Paragraph Structure**: Maintain the same paragraph structure and formatting as the original text
+4. **Language-Specific Adaptation**: Some languages may need different line break positions for optimal readability
 
-Example:
+TRANSLATION QUALITY RULES:
+- Use natural, conversational expressions that native speakers would actually use
+- Avoid literal or robotic translations
+- Ensure fluency appropriate for everyday communication
+- Maintain cultural appropriateness for the target language
+
+FORMATTING EXAMPLES:
 Original: "Hello\\nWorld\\nWelcome"
-Translation should maintain line breaks: "안녕하세요\\n세계\\n환영합니다"
+Korean: "안녕하세요\\n세계\\n환영합니다"
+Japanese: "こんにちは\\n世界\\nようこそ"
+
+Original: "Please click\\nthe button below\\nto continue"
+Korean: "아래 버튼을\\n클릭하여\\n계속하세요"
 `
 
   // 토큰 제한 제거 - 모델의 최대 가능한 토큰 사용
@@ -55,7 +64,7 @@ Translation should maintain line breaks: "안녕하세요\\n세계\\n환영합�
       messages: [
         {
           role: 'system',
-          content: 'You are a professional translator. Provide accurate, natural translations that are culturally appropriate. Always preserve formatting including line breaks (\\n) from the original text where they make sense in the target language.'
+          content: 'You are a professional translator specializing in preserving formatting while delivering natural translations. CRITICAL: You MUST preserve all line breaks (\\n) from the source text in your translation, positioning them at natural boundaries in the target language for optimal readability and flow.'
         },
         {
           role: 'user',
@@ -97,29 +106,40 @@ export async function batchTranslateWithOpenAI({
   const targetLangList = targetLanguages.map(lang => `${lang.code}: ${lang.name}`).join('\n')
   
   const prompt = `
-IMPORTANT: You must respond with ONLY a valid JSON object. Do NOT use markdown code blocks or any formatting.
+CRITICAL: You must respond with ONLY a valid JSON object. Do NOT use markdown code blocks or any formatting.
 
 Task: Translate "${text}" from ${sourceLang} to the following languages:
 ${targetLangList}
 
 ${context ? `Context: ${context}` : ''}
 
-FORMATTING RULES FOR LINE BREAKS:
-- If the original text contains line breaks (\\n), preserve them in translations where appropriate
-- Maintain the same paragraph structure and formatting as the original
-- Ensure line breaks appear at natural sentence or phrase boundaries in each target language
-- Some languages may need different line break positions for natural flow
+MANDATORY LINE BREAK PRESERVATION RULES:
+1. **PRESERVE ALL LINE BREAKS**: If the source text contains line breaks (\\n), you MUST preserve them in ALL translations
+2. **Natural Positioning**: Position line breaks at natural sentence or phrase boundaries in each target language
+3. **Paragraph Structure**: Maintain identical paragraph structure and formatting as the original text
+4. **Language-Specific Flow**: Adapt line break positions for optimal readability in each target language while preserving the original structure
+5. **Consistent Formatting**: All translations must have the same number of line breaks as the source text
 
-Required output format (example):
-{"ko": "안녕하세요\\n세계", "ja": "こんにちは\\n世界", "es": "Hola\\nMundo"}
+TRANSLATION QUALITY REQUIREMENTS:
+- Use natural, conversational expressions native speakers would use
+- Ensure cultural appropriateness for each target language
+- Maintain fluency appropriate for everyday communication
+- Avoid literal or robotic translations
 
-Rules:
+FORMATTING EXAMPLES:
+Source: "Hello\\nWorld\\nWelcome"
+Output: {"ko": "안녕하세요\\n세계\\n환영합니다", "ja": "こんにちは\\n世界\\nようこそ"}
+
+Source: "Click here\\nto continue\\nyour journey"
+Output: {"ko": "여기를 클릭하여\\n계속\\n여행을 진행하세요", "ja": "ここをクリックして\\n続行\\nあなたの旅"}
+
+RESPONSE RULES:
 1. Return ONLY the JSON object, nothing else
 2. Use the exact language codes provided above
 3. Do NOT wrap in markdown code blocks
 4. Do NOT add explanations or comments
-5. Preserve line breaks (\\n) from original text where they make sense
-6. Ensure all translations are natural and culturally appropriate
+5. MUST preserve all line breaks (\\n) from original text
+6. All translations must be natural and culturally appropriate
 `
 
   // Progress tracking
@@ -145,7 +165,7 @@ Rules:
       messages: [
         {
           role: 'system',
-          content: 'You are a professional translator. You MUST respond with ONLY a valid JSON object without any markdown formatting, code blocks, or additional text. Your response should start with { and end with }. Always preserve formatting including line breaks (\\n) from the original text where they make sense in each target language.'
+          content: 'You are a professional translator specializing in preserving formatting. You MUST respond with ONLY a valid JSON object without any markdown formatting, code blocks, or additional text. Your response should start with { and end with }. CRITICAL: You MUST preserve ALL line breaks (\\n) from the source text in every translation, positioning them at natural boundaries in each target language for optimal readability.'
         },
         {
           role: 'user',

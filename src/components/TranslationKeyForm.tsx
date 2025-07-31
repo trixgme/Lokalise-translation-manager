@@ -43,7 +43,7 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
   const [platforms, setPlatforms] = useState<string[]>(['ios', 'android'])
   const [isLoading, setIsLoading] = useState(false)
   const [useAI, setUseAI] = useState(true)
-  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini')
+  const [selectedModel, setSelectedModel] = useState('gpt-4o')
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([])
   const [showProgress, setShowProgress] = useState(false)
   const [overallProgress, setOverallProgress] = useState(0)
@@ -198,12 +198,15 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
                   }
                   
                   setTimeout(() => {
+                    // 폼 필드 리셋 (tags는 유지)
                     setKeyName('')
                     setDescription('')
                     setSourceText('')
-                    setTags('')
+                    // tags는 의도적으로 유지
                     setPlatforms(['ios', 'android'])
-                    setSelectedModel('gpt-4o-mini')
+                    setSelectedModel('gpt-4o')
+                    
+                    // 진행 상태 초기화
                     setShowProgress(false)
                     setProgressSteps([])
                     setOverallProgress(0)
