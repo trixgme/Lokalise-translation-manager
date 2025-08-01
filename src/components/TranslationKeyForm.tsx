@@ -33,6 +33,7 @@ const GPT_MODELS = [
   { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Economic)', description: 'Cost-efficient compact model' },
   { value: 'gpt-4o', label: 'GPT-4o (Multimodal)', description: 'Fast and powerful GPT-4 model' },
   { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (High Performance)', description: 'High-performance general-purpose model' },
+  { value: 'gpt-4.1', label: 'GPT-4.1 (Latest)', description: 'Latest and most advanced GPT-4 model' },
 ]
 
 export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormProps) {
@@ -43,7 +44,7 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
   const [platforms, setPlatforms] = useState<string[]>(['ios', 'android'])
   const [isLoading, setIsLoading] = useState(false)
   const [useAI, setUseAI] = useState(true)
-  const [selectedModel, setSelectedModel] = useState('gpt-4o')
+  const [selectedModel, setSelectedModel] = useState('gpt-4.1')
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([])
   const [showProgress, setShowProgress] = useState(false)
   const [overallProgress, setOverallProgress] = useState(0)
@@ -204,7 +205,7 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
                     setSourceText('')
                     // tags는 의도적으로 유지
                     setPlatforms(['ios', 'android'])
-                    setSelectedModel('gpt-4o')
+                    setSelectedModel('gpt-4.1')
                     
                     // 진행 상태 초기화
                     setShowProgress(false)

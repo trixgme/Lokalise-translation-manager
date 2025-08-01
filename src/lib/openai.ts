@@ -27,33 +27,42 @@ export async function translateWithOpenAI({
   sourceLang,
   targetLang,
   context,
-  model = 'gpt-4o'
+  model = 'gpt-4.1'
 }: TranslationRequest): Promise<string> {
   const prompt = `
-Translate the following text from ${sourceLang} to ${targetLang}.
+You are a professional human translator specializing in ${targetLang}. Translate the following text from ${sourceLang} to ${targetLang}.
 ${context ? `Context: ${context}` : ''}
 
 Text to translate: "${text}"
 
-CRITICAL FORMATTING REQUIREMENTS:
+CRITICAL TRANSLATION PRINCIPLES:
+1. **Think like a native speaker**: How would a native ${targetLang} speaker naturally express this idea?
+2. **Prioritize meaning over words**: Convey the intended meaning, not word-for-word translation
+3. **Use natural expressions**: Choose phrases that sound authentic and conversational in ${targetLang}
+4. **Consider cultural context**: Adapt expressions to be culturally appropriate and relevant
+5. **Avoid translation artifacts**: Never use awkward constructions that reveal machine translation
+
+FORMATTING REQUIREMENTS:
 1. **Line Break Preservation**: ONLY if the source text contains line breaks (\\n), preserve them in your translation. If the source text has NO line breaks, your translation must also have NO line breaks.
 2. **Natural Flow**: When line breaks exist in source, position them at natural sentence or phrase boundaries in the target language
 3. **Paragraph Structure**: Maintain the same paragraph structure and formatting as the original text
 4. **No Extra Line Breaks**: Do NOT add line breaks if the source text doesn't have them
 
-TRANSLATION QUALITY RULES:
-- Use natural, conversational expressions that native speakers would actually use
-- Avoid literal or robotic translations
-- Ensure fluency appropriate for everyday communication
-- Maintain cultural appropriateness for the target language
+QUALITY STANDARDS:
+- Sound like it was originally written in ${targetLang}, not translated
+- Use idiomatic expressions and natural word order
+- Choose vocabulary that native speakers actually use in daily conversation
+- Maintain the original tone and register (formal, casual, technical, etc.)
+- Ensure grammatical accuracy while prioritizing naturalness
 
-FORMATTING EXAMPLES:
-Original: "Hello\\nWorld\\nWelcome"
-Korean: "안녕하세요\\n세계\\n환영합니다"
-Japanese: "こんにちは\\n世界\\nようこそ"
+EXAMPLES OF NATURAL VS MECHANICAL TRANSLATION:
+✗ Mechanical: "Please click the button that is below to continue the process"
+✓ Natural: "Click the button below to continue"
 
-Original: "Please click\\nthe button below\\nto continue"
-Korean: "아래 버튼을\\n클릭하여\\n계속하세요"
+✗ Mechanical: "We are providing you with the best service possible"  
+✓ Natural: "We're here to give you the best service possible"
+
+Remember: Your goal is to produce text that sounds like it was originally written by a native ${targetLang} speaker for ${targetLang} speakers.
 `
 
   // 토큰 제한 제거 - 모델의 최대 가능한 토큰 사용
@@ -100,18 +109,24 @@ export async function batchTranslateWithOpenAI({
   sourceLang,
   targetLanguages,
   context,
-  model = 'gpt-4o',
+  model = 'gpt-4.1',
   onProgress
 }: BatchTranslationRequest): Promise<Record<string, string>> {
   const targetLangList = targetLanguages.map(lang => `${lang.code}: ${lang.name}`).join('\n')
   
   const prompt = `
-CRITICAL: You must respond with ONLY a valid JSON object. Do NOT use markdown code blocks or any formatting.
-
-Task: Translate "${text}" from ${sourceLang} to the following languages:
+You are a team of professional human translators, each specializing in their respective languages. Your task is to translate "${text}" from ${sourceLang} to the following languages:
 ${targetLangList}
 
 ${context ? `Context: ${context}` : ''}
+
+CRITICAL TRANSLATION PRINCIPLES FOR EACH LANGUAGE:
+1. **Think like native speakers**: How would native speakers of each language naturally express this idea?
+2. **Prioritize meaning over words**: Convey the intended meaning, not word-for-word translation
+3. **Use authentic expressions**: Choose phrases that sound natural and conversational in each language
+4. **Consider cultural context**: Adapt expressions to be culturally appropriate for each target culture
+5. **Avoid translation artifacts**: Never use awkward constructions that reveal machine translation
+6. **Match the original tone**: Maintain the same level of formality, emotion, and style
 
 MANDATORY LINE BREAK PRESERVATION RULES:
 1. **CONDITIONAL PRESERVATION**: ONLY preserve line breaks (\\n) if they exist in the source text. If source has NO line breaks, translations must also have NO line breaks.
@@ -120,26 +135,27 @@ MANDATORY LINE BREAK PRESERVATION RULES:
 4. **No Extra Line Breaks**: Never add line breaks that don't exist in the source text
 5. **Exact Count Matching**: All translations must have the exact same number of line breaks as the source text (including zero)
 
-TRANSLATION QUALITY REQUIREMENTS:
-- Use natural, conversational expressions native speakers would use
-- Ensure cultural appropriateness for each target language
-- Maintain fluency appropriate for everyday communication
-- Avoid literal or robotic translations
+QUALITY STANDARDS FOR EACH TRANSLATION:
+- Sound like it was originally written in the target language, not translated
+- Use idiomatic expressions and natural word order specific to each language
+- Choose vocabulary that native speakers actually use in daily conversation
+- Ensure grammatical accuracy while prioritizing naturalness
+- Adapt cultural references and expressions appropriately
 
-FORMATTING EXAMPLES:
-Source: "Hello\\nWorld\\nWelcome"
-Output: {"ko": "안녕하세요\\n세계\\n환영합니다", "ja": "こんにちは\\n世界\\nようこそ"}
+EXAMPLES OF NATURAL VS MECHANICAL TRANSLATION:
+✗ Mechanical Korean: "버튼을 클릭해주시기 바랍니다"
+✓ Natural Korean: "버튼을 눌러주세요"
 
-Source: "Click here\\nto continue\\nyour journey"
-Output: {"ko": "여기를 클릭하여\\n계속\\n여행을 진행하세요", "ja": "ここをクリックして\\n続行\\nあなたの旅"}
+✗ Mechanical Japanese: "下のボタンをクリックしてください続行するために"
+✓ Natural Japanese: "下のボタンをクリックして続行してください"
 
-RESPONSE RULES:
-1. Return ONLY the JSON object, nothing else
-2. Use the exact language codes provided above
-3. Do NOT wrap in markdown code blocks
-4. Do NOT add explanations or comments
-5. MUST preserve all line breaks (\\n) from original text
-6. All translations must be natural and culturally appropriate
+RESPONSE FORMAT:
+- Return ONLY a valid JSON object, nothing else
+- Use the exact language codes provided above
+- Do NOT wrap in markdown code blocks or add explanations
+- Each translation should sound like it was originally written by a native speaker
+
+Remember: Your goal is to produce translations that native speakers would naturally write, not mechanical translations that sound foreign.
 `
 
   // Progress tracking
