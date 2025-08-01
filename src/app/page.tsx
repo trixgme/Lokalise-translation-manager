@@ -1,6 +1,7 @@
 'use client'
 
 import TranslationKeyForm from '@/components/TranslationKeyForm'
+import SourceTextValidator from '@/components/SourceTextValidator'
 import ThemeToggle from '@/components/ThemeToggle'
 import LogoutButton from '@/components/LogoutButton'
 
@@ -11,7 +12,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-background py-8">
-      <div className="container max-w-4xl">
+      <div className="container max-w-7xl">
         <div className="flex justify-between items-center mb-4">
           <LogoutButton />
           <ThemeToggle />
@@ -28,8 +29,13 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="max-w-2xl mx-auto">
-          <TranslationKeyForm onKeyAdded={handleKeyAdded} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div>
+            <TranslationKeyForm onKeyAdded={handleKeyAdded} />
+          </div>
+          <div>
+            <SourceTextValidator />
+          </div>
         </div>
       </div>
     </main>
