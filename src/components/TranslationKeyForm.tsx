@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CheckCircle, XCircle, Clock, Circle, Upload, X, Eye } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Circle, Upload, X, Eye, Link, Download } from 'lucide-react'
 import TranslationResults from '@/components/TranslationResults'
 
 interface TranslationKeyFormProps {
@@ -59,6 +59,8 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [imageUrl, setImageUrl] = useState('')
+  const [isDownloadingUrl, setIsDownloadingUrl] = useState(false)
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -173,6 +175,65 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
         const url = URL.createObjectURL(file)
         setPreviewUrls(prev => [...prev, url])
       }
+    }
+  }
+
+  const handleDownloadFromUrl = async () => {
+    if (!imageUrl.trim()) return
+    
+    setIsDownloadingUrl(true)
+    
+    try {
+      const response = await fetch('/api/download-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageUrl: imageUrl.trim()
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to download image')
+      }
+
+      const blob = await response.blob()
+      
+      // Create filename from URL or use default
+      let filename = 'downloaded-image'
+      try {
+        const urlObj = new URL(imageUrl)
+        const pathParts = urlObj.pathname.split('/')
+        const lastPart = pathParts[pathParts.length - 1]
+        if (lastPart && lastPart.includes('.')) {
+          filename = lastPart
+        } else {
+          filename = `downloaded-image-${Date.now()}.png`
+        }
+      } catch {
+        filename = `downloaded-image-${Date.now()}.png`
+      }
+
+      // Convert blob to File object
+      const file = new File([blob], filename, { type: blob.type })
+      
+      // Add to screenshots
+      setScreenshots(prev => [...prev, file])
+      
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file)
+      setPreviewUrls(prev => [...prev, previewUrl])
+      
+      // Clear input
+      setImageUrl('')
+      
+      console.log(`Successfully downloaded image: ${filename}`)
+    } catch (error) {
+      console.error('Error downloading image:', error)
+      alert('이미지 다운로드에 실패했습니다. URL을 확인해주세요.')
+    } finally {
+      setIsDownloadingUrl(false)
     }
   }
 
@@ -472,6 +533,7 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
           previewUrls.forEach(url => URL.revokeObjectURL(url))
           setScreenshots([])
           setPreviewUrls([])
+          setImageUrl('')
           
           setShowProgress(false)
           setProgressSteps([])
@@ -549,6 +611,7 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
                     previewUrls.forEach(url => URL.revokeObjectURL(url))
                     setScreenshots([])
                     setPreviewUrls([])
+                    setImageUrl('')
                     
                     // 진행 상태 초기화
                     setShowProgress(false)
@@ -751,6 +814,53 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
                   </div>
                   <div className="text-xs text-muted-foreground text-center mt-2">
                     Max 10MB per image. Supports PNG, JPG, GIF, WebP
+                  </div>
+                </div>
+
+                {/* URL 다운로드 섹션 추가 */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <hr className="flex-1" />
+                    <span className="text-xs text-muted-foreground">OR</span>
+                    <hr className="flex-1" />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="image-url" className="flex items-center gap-2">
+                      <Link className="w-4 h-4" />
+                      Download from URL
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="image-url"
+                        placeholder="https://example.com/image.png"
+                        value={imageUrl}
+                        onChange={(e) => setImageUrl(e.target.value)}
+                        disabled={isLoading || isDownloadingUrl}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDownloadFromUrl}
+                        disabled={!imageUrl.trim() || isLoading || isDownloadingUrl}
+                        className="px-3"
+                      >
+                        {isDownloadingUrl ? (
+                          <>
+                            <Download className="w-4 h-4 animate-spin" />
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Enter a direct image URL to download and add to screenshots
+                    </div>
                   </div>
                 </div>
                 
