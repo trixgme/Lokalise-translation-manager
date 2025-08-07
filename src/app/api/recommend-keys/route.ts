@@ -23,7 +23,7 @@ interface KeyRecommendation {
 
 export async function POST(request: NextRequest) {
   try {
-    const { text } = await request.json()
+    const { text, prefix } = await request.json()
 
     if (!text || typeof text !== 'string' || !text.trim()) {
       return NextResponse.json(
@@ -34,10 +34,12 @@ export async function POST(request: NextRequest) {
 
     console.log('=== Key Recommendation Request ===')
     console.log('Input text:', text)
+    console.log('Prefix:', prefix || 'none')
 
     const prompt = `You are a senior software engineer specializing in internationalization (i18n) and translation key naming conventions. 
 
 Your task is to recommend translation keys for the following English text: "${text}"
+${prefix ? `\nIMPORTANT: All recommended keys MUST start with the prefix "${prefix}_" (prefix + underscore).` : ''}
 
 NAMING CONVENTION RULES:
 1. Use ONLY underscores (_) to separate words (e.g., "home_welcome_title")
@@ -86,10 +88,13 @@ Focus on:
 5. REMEMBER: Use only underscores (_) for all word separations
 
 EXAMPLES OF CORRECT KEY FORMAT:
-- "welcome_message" 
+${prefix ? `- "${prefix}_welcome_message" 
+- "${prefix}_user_profile_edit_button"
+- "${prefix}_home_welcome_title"
+- "${prefix}_fintech_platform_welcome"` : `- "welcome_message" 
 - "user_profile_edit_button"
 - "home_welcome_title"
-- "fintech_platform_welcome"
+- "fintech_platform_welcome"`}
 
 Remember: Return ONLY valid JSON, no additional text or formatting.`
 
@@ -172,15 +177,17 @@ Remember: Return ONLY valid JSON, no additional text or formatting.`
         .replace(/\s+/g, '_')
         .substring(0, 50)
       
+      const baseKey = prefix ? `${prefix}_${fallbackKey}` : fallbackKey
+      
       recommendations = [
         {
-          key: `ui_${fallbackKey}`,
-          reasoning: 'Generic UI key based on text content (fallback)',
+          key: prefix ? `${prefix}_ui_${fallbackKey}` : `ui_${fallbackKey}`,
+          reasoning: `Generic UI key based on text content${prefix ? ` with prefix "${prefix}"` : ''} (fallback)`,
           category: 'UI'
         },
         {
-          key: `common_${fallbackKey}`,
-          reasoning: 'Common text key for reusable content (fallback)',
+          key: prefix ? `${prefix}_common_${fallbackKey}` : `common_${fallbackKey}`,
+          reasoning: `Common text key for reusable content${prefix ? ` with prefix "${prefix}"` : ''} (fallback)`,
           category: 'General'
         }
       ]
@@ -190,6 +197,7 @@ Remember: Return ONLY valid JSON, no additional text or formatting.`
       success: true,
       recommendations,
       inputText: text,
+      prefix: prefix || null,
       model: 'gpt-3.5-turbo'
     })
 

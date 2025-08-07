@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +21,7 @@ interface KeyRecommendation {
 
 export default function KeyRecommender({ onKeySelect }: KeyRecommenderProps) {
   const [inputText, setInputText] = useState('')
+  const [prefix, setPrefix] = useState('')
   const [recommendations, setRecommendations] = useState<KeyRecommendation[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
@@ -37,7 +39,8 @@ export default function KeyRecommender({ onKeySelect }: KeyRecommenderProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          text: inputText.trim()
+          text: inputText.trim(),
+          prefix: prefix.trim()
         })
       })
 
@@ -93,16 +96,31 @@ export default function KeyRecommender({ onKeySelect }: KeyRecommenderProps) {
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="input-text">English Text</Label>
-          <Textarea
-            id="input-text"
-            placeholder="Enter the English text you want to create a translation key for...&#10;Example: Welcome to our fintech platform"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            rows={3}
-            disabled={isLoading}
-          />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="input-text">English Text</Label>
+            <Textarea
+              id="input-text"
+              placeholder="Enter the English text you want to create a translation key for...&#10;Example: Welcome to our fintech platform"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              rows={3}
+              disabled={isLoading}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="prefix">Prefix (Optional)</Label>
+            <Input
+              id="prefix"
+              placeholder="e.g., test, home, user"
+              value={prefix}
+              onChange={(e) => setPrefix(e.target.value)}
+              disabled={isLoading}
+            />
+            <p className="text-xs text-muted-foreground">
+              Keys will start with: <code className="text-xs">{prefix ? `${prefix}_` : 'no prefix'}</code>
+            </p>
+          </div>
         </div>
 
         <Button 
