@@ -64,3 +64,22 @@ export interface TranslateRequest {
   target_lang_isos: string[]
   keys: number[]
 }
+
+export interface CreateScreenshotRequest {
+  screenshots: {
+    data: string  // base64 data URL (e.g., "data:image/jpeg;base64,/9j/4AAQ...")
+    title?: string
+    description?: string
+    key_ids?: number[]  // 연관된 키 ID들
+  }[]
+}
+
+export interface LokaliseScreenshot {
+  screenshot_id: number
+  title: string
+  description?: string
+  screenshot_tags: string[]
+  url: string
+  created_at: string
+  key_ids: number[]
+}

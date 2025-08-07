@@ -1,13 +1,30 @@
 'use client'
 
+import { useRef } from 'react'
 import TranslationKeyForm from '@/components/TranslationKeyForm'
 import SourceTextValidator from '@/components/SourceTextValidator'
+import KeyRecommender from '@/components/KeyRecommender'
 import ThemeToggle from '@/components/ThemeToggle'
 import LogoutButton from '@/components/LogoutButton'
 
 export default function Home() {
+  const translationFormRef = useRef<{ setKeyAndText: (key: string, text: string) => void }>(null)
+
   const handleKeyAdded = () => {
     // Key added handler - can be used for future features
+  }
+
+  const handleKeySelect = (key: string, text: string) => {
+    // Pass the selected key and text to the TranslationKeyForm
+    if (translationFormRef.current) {
+      translationFormRef.current.setKeyAndText(key, text)
+    }
+    
+    // Scroll to the form
+    document.querySelector('#translation-key-form')?.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'start' 
+    })
   }
 
   return (
@@ -30,11 +47,17 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div>
-            <TranslationKeyForm onKeyAdded={handleKeyAdded} />
+          <div className="space-y-8">
+            <div id="translation-key-form">
+              <TranslationKeyForm 
+                ref={translationFormRef}
+                onKeyAdded={handleKeyAdded} 
+              />
+            </div>
           </div>
-          <div>
+          <div className="space-y-8">
             <SourceTextValidator />
+            <KeyRecommender onKeySelect={handleKeySelect} />
           </div>
         </div>
       </div>

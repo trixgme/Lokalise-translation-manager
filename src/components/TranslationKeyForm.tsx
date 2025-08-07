@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -10,11 +10,15 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CheckCircle, XCircle, Clock, Circle } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Circle, Upload, X, Eye } from 'lucide-react'
 import TranslationResults from '@/components/TranslationResults'
 
 interface TranslationKeyFormProps {
   onKeyAdded: () => void
+}
+
+export interface TranslationKeyFormRef {
+  setKeyAndText: (key: string, text: string) => void
 }
 
 interface ProgressStep {
@@ -36,7 +40,7 @@ const GPT_MODELS = [
   { value: 'gpt-4.1', label: 'GPT-4.1 (Latest)', description: 'Latest and most advanced GPT-4 model' },
 ]
 
-export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormProps) {
+const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormProps>(({ onKeyAdded }, ref) => {
   const [keyName, setKeyName] = useState('')
   const [description, setDescription] = useState('')
   const [sourceText, setSourceText] = useState('')
@@ -51,6 +55,46 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
   const progressRef = useRef<HTMLDivElement>(null)
   const [translationResults, setTranslationResults] = useState<any>(null)
   const [showResults, setShowResults] = useState(false)
+  const [screenshots, setScreenshots] = useState<File[]>([])
+  const [previewUrls, setPreviewUrls] = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDragOver, setIsDragOver] = useState(false)
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    setKeyAndText: (key: string, text: string) => {
+      setKeyName(key)
+      setSourceText(text)
+      
+      // Optional: Show a brief highlight animation
+      const keyInput = document.getElementById('keyName')
+      const textArea = document.getElementById('sourceText')
+      
+      if (keyInput) {
+        keyInput.focus()
+        keyInput.style.transition = 'all 0.3s ease'
+        keyInput.style.backgroundColor = 'var(--primary)'
+        keyInput.style.color = 'var(--primary-foreground)'
+        setTimeout(() => {
+          keyInput.style.backgroundColor = ''
+          keyInput.style.color = ''
+        }, 1000)
+      }
+      
+      if (textArea) {
+        setTimeout(() => {
+          textArea.focus()
+          textArea.style.transition = 'all 0.3s ease'
+          textArea.style.backgroundColor = 'var(--primary)'
+          textArea.style.color = 'var(--primary-foreground)'
+          setTimeout(() => {
+            textArea.style.backgroundColor = ''
+            textArea.style.color = ''
+          }, 1000)
+        }, 500)
+      }
+    }
+  }))
 
   const handlePlatformChange = (platform: string) => {
     setPlatforms(prev => 
@@ -58,6 +102,78 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
         ? prev.filter(p => p !== platform)
         : [...prev, platform]
     )
+  }
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    const newFiles = Array.from(files).filter(file => {
+      return file.type.startsWith('image/') && file.size <= 10 * 1024 * 1024 // 10MB limit
+    })
+
+    setScreenshots(prev => [...prev, ...newFiles])
+
+    // Create preview URLs and convert to base64
+    for (const file of newFiles) {
+      const url = URL.createObjectURL(file)
+      setPreviewUrls(prev => [...prev, url])
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const removeScreenshot = (index: number) => {
+    // Revoke the object URL to prevent memory leaks
+    URL.revokeObjectURL(previewUrls[index])
+    
+    setScreenshots(prev => prev.filter((_, i) => i !== index))
+    setPreviewUrls(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const openPreview = (url: string) => {
+    window.open(url, '_blank', 'width=800,height=600')
+  }
+
+  const fileToBase64DataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+
+    const files = Array.from(e.dataTransfer.files).filter(file => {
+      return file.type.startsWith('image/') && file.size <= 10 * 1024 * 1024 // 10MB limit
+    })
+
+    if (files.length > 0) {
+      setScreenshots(prev => [...prev, ...files])
+
+      // Create preview URLs
+      for (const file of files) {
+        const url = URL.createObjectURL(file)
+        setPreviewUrls(prev => [...prev, url])
+      }
+    }
   }
 
   const updateStepStatus = (
@@ -87,39 +203,78 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
     const steps: ProgressStep[] = [
       {
         id: 'validation',
-        title: 'Input Validation',
-        description: 'Validating translation key information and platform settings...',
+        title: '1. Input Validation',
+        description: 'Validating translation key information and platform settings',
         status: 'pending'
       },
       {
-        id: 'languages',
-        title: 'Language Lookup',
-        description: 'Fetching supported language list from Lokalise...',
+        id: 'preparation',
+        title: '2. Data Preparation',
+        description: screenshots.length > 0 
+          ? `Preparing key data and converting ${screenshots.length} screenshot(s) to base64`
+          : 'Preparing translation key data',
         status: 'pending'
       }
     ]
 
+    let stepNumber = 3
+
     if (useAI) {
       steps.push({
+        id: 'languages',
+        title: `${stepNumber}. Language Detection`,
+        description: 'Fetching supported project languages from Lokalise',
+        status: 'pending'
+      })
+      stepNumber++
+
+      steps.push({
         id: 'translation',
-        title: 'AI Translation',
-        description: 'Generating multilingual translations using OpenAI...',
+        title: `${stepNumber}. AI Translation`,
+        description: `Generating multilingual translations using ${selectedModel}`,
         status: 'pending',
         progress: 0,
         subSteps: [
           'Preparing target languages',
-          'Creating batch translation request',
+          'Creating batch translation request', 
           'Calling OpenAI API',
-          'Validating translation results',
-          'Processing translation data'
+          'Processing translation results',
+          'Validating translations'
         ]
       })
+      stepNumber++
+
+      steps.push({
+        id: 'integration',
+        title: `${stepNumber}. Translation Integration`,
+        description: 'Integrating AI translations with key data',
+        status: 'pending'
+      })
+      stepNumber++
     }
 
     steps.push({
-      id: 'creation',
-      title: 'Translation Key Creation',
-      description: 'Saving translation key and translations to Lokalise...',
+      id: 'key-creation',
+      title: `${stepNumber}. Key Creation`,
+      description: 'Creating translation key in Lokalise project',
+      status: 'pending'
+    })
+    stepNumber++
+
+    if (screenshots.length > 0) {
+      steps.push({
+        id: 'screenshot-upload',
+        title: `${stepNumber}. Screenshot Upload`,
+        description: `Uploading and linking ${screenshots.length} screenshot(s) to the key`,
+        status: 'pending'
+      })
+      stepNumber++
+    }
+
+    steps.push({
+      id: 'completion',
+      title: `${stepNumber}. Completion`,
+      description: 'Finalizing and validating the creation process',
       status: 'pending'
     })
 
@@ -144,7 +299,190 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
     }, 100)
 
     try {
-      // Use Server-Sent Events for real-time progress
+      // Check if we have screenshots to upload
+      if (screenshots.length > 0) {
+        // Step 1: Input Validation
+        updateStepStatus('validation', 'in_progress', 'Validating input data...')
+        await new Promise(resolve => setTimeout(resolve, 800)) // UI feedback delay
+        updateStepStatus('validation', 'completed', 'Input validation completed')
+        
+        await new Promise(resolve => setTimeout(resolve, 300)) // Pause between steps
+
+        // Step 2: Data Preparation
+        updateStepStatus('preparation', 'in_progress', 'Converting screenshots to base64 format...')
+        await new Promise(resolve => setTimeout(resolve, 500)) // Show processing
+        
+        console.log('Converting screenshots to base64...')
+        const base64Screenshots = await Promise.all(
+          screenshots.map(async (file, index) => {
+            console.log(`Converting screenshot ${index}: ${file.name}`)
+            const base64 = await fileToBase64DataURL(file)
+            return {
+              data: base64,
+              title: `Screenshot for ${keyName}`,
+              description: `Visual context for translation key: ${keyName}`,
+              key_ids: [] // Will be populated on server side
+            }
+          })
+        )
+
+        console.log('All screenshots converted to base64')
+        updateStepStatus('preparation', 'completed', `Converted ${screenshots.length} screenshot(s) to base64 format`)
+        
+        await new Promise(resolve => setTimeout(resolve, 300)) // Pause between steps
+
+        // Step 3: Language Detection (if AI enabled)
+        if (useAI) {
+          updateStepStatus('languages', 'in_progress', 'Fetching supported languages from Lokalise...')
+          await new Promise(resolve => setTimeout(resolve, 700)) // Show processing
+          // Languages will be completed after successful API call
+        }
+
+        // Step 4: AI Translation (if enabled)
+        if (useAI) {
+          await new Promise(resolve => setTimeout(resolve, 300)) // Pause between steps
+          updateStepStatus('translation', 'in_progress', 'Starting AI translation process...', 10, 'Preparing target languages')
+          
+          // Simulate translation progress steps
+          await new Promise(resolve => setTimeout(resolve, 500))
+          updateStepStatus('translation', 'in_progress', 'Processing translation request...', 30, 'Creating batch translation request')
+          
+          await new Promise(resolve => setTimeout(resolve, 500))
+          updateStepStatus('translation', 'in_progress', 'Calling OpenAI API...', 50, 'Calling OpenAI API')
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 400)) // Pause before API call
+
+        // Prepare request body
+        const requestBody = {
+          keysData: {
+            keys: [{
+              key_name: keyName,
+              description,
+              platforms,
+              tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
+              translations: [{
+                language_iso: 'en',
+                translation: sourceText
+              }]
+            }]
+          },
+          screenshots: base64Screenshots,
+          useAI,
+          gptModel: selectedModel
+        }
+
+        // Update progress for integration step (if AI enabled)
+        if (useAI) {
+          updateStepStatus('translation', 'in_progress', 'Processing translation results...', 70, 'Processing translation results')
+          await new Promise(resolve => setTimeout(resolve, 300))
+          updateStepStatus('integration', 'in_progress', 'Preparing data integration...')
+        }
+
+        // Start key creation step
+        updateStepStatus('key-creation', 'in_progress', 'Creating translation key in Lokalise...')
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        // Make the actual API call
+        const response = await fetch('/api/keys-with-screenshots', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error('API Error Response:', errorText)
+          console.error('Response Status:', response.status)
+          console.error('Response Headers:', [...response.headers.entries()])
+          
+          // Mark current in-progress step as error
+          const currentStep = progressSteps.find(step => step.status === 'in_progress')
+          if (currentStep) {
+            updateStepStatus(currentStep.id, 'error', `API Error: ${response.status}`)
+          }
+          
+          throw new Error(`Failed to create key with screenshots: ${response.status} - ${errorText}`)
+        }
+
+        const result = await response.json()
+        console.log('Created key with screenshots:', result)
+
+        // Complete steps sequentially with delays
+        if (useAI) {
+          updateStepStatus('languages', 'completed', 'Languages fetched successfully')
+          await new Promise(resolve => setTimeout(resolve, 200))
+          
+          updateStepStatus('translation', 'completed', `AI translation completed using ${selectedModel}`, 100, 'Validating translations')
+          await new Promise(resolve => setTimeout(resolve, 300))
+          
+          updateStepStatus('integration', 'completed', 'Translations integrated with key data')
+          await new Promise(resolve => setTimeout(resolve, 200))
+        }
+        
+        updateStepStatus('key-creation', 'completed', 'Translation key created successfully')
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
+        // Handle screenshot upload step
+        if (screenshots.length > 0) {
+          updateStepStatus('screenshot-upload', 'in_progress', `Uploading ${screenshots.length} screenshot(s) to Lokalise...`)
+          await new Promise(resolve => setTimeout(resolve, 800)) // Show upload process
+          
+          if (result.screenshotError) {
+            updateStepStatus('screenshot-upload', 'error', result.screenshotError)
+          } else if (result.screenshots) {
+            updateStepStatus('screenshot-upload', 'completed', `Successfully uploaded ${screenshots.length} screenshot(s)`)
+          }
+          await new Promise(resolve => setTimeout(resolve, 300))
+        }
+        
+        // Final completion step
+        updateStepStatus('completion', 'in_progress', 'Finalizing process...')
+        await new Promise(resolve => setTimeout(resolve, 500))
+        updateStepStatus('completion', 'completed', 'Process completed successfully')
+        
+        // Show results if translations were created
+        if (result.keys && result.keys[0] && result.keys[0].translations) {
+          const translationData = {
+            keyId: result.keys[0].key_id.toString(),
+            keyName: result.keys[0].key_name.web || result.keys[0].key_name.ios || result.keys[0].key_name.android,
+            sourceText,
+            translations: result.keys[0].translations.map((t: any) => ({
+              language: t.language_iso,
+              translation: t.translation,
+              success: true // All translations from Lokalise API are successful
+            })),
+            model: selectedModel
+          }
+          setTranslationResults(translationData)
+          setShowResults(true)
+        }
+        
+        // Reset form after completion
+        setTimeout(() => {
+          setKeyName('')
+          setDescription('')
+          setSourceText('')
+          setPlatforms(['ios', 'android'])
+          setSelectedModel('gpt-4.1')
+          
+          // Clear screenshots and preview URLs
+          previewUrls.forEach(url => URL.revokeObjectURL(url))
+          setScreenshots([])
+          setPreviewUrls([])
+          
+          setShowProgress(false)
+          setProgressSteps([])
+          setOverallProgress(0)
+          onKeyAdded()
+        }, 3000)
+
+        return
+      }
+
+      // Original SSE logic for keys without screenshots
       const response = await fetch('/api/keys/create-with-progress', {
         method: 'POST',
         headers: {
@@ -206,6 +544,11 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
                     // tags는 의도적으로 유지
                     setPlatforms(['ios', 'android'])
                     setSelectedModel('gpt-4.1')
+                    
+                    // Clear screenshots and preview URLs
+                    previewUrls.forEach(url => URL.revokeObjectURL(url))
+                    setScreenshots([])
+                    setPreviewUrls([])
                     
                     // 진행 상태 초기화
                     setShowProgress(false)
@@ -364,6 +707,103 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
             </div>
 
             <div className="space-y-4">
+              <div className="space-y-3">
+                <Label>Screenshots (Optional)</Label>
+                <div 
+                  className={`border-2 border-dashed rounded-lg p-4 transition-colors ${
+                    isDragOver 
+                      ? 'border-primary bg-primary/5' 
+                      : 'border-muted hover:border-muted-foreground/50'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <div className="text-center">
+                    <Upload className={`mx-auto h-8 w-8 mb-2 ${
+                      isDragOver ? 'text-primary' : 'text-muted-foreground'
+                    }`} />
+                    <div className={`text-sm mb-2 ${
+                      isDragOver ? 'text-primary' : 'text-muted-foreground'
+                    }`}>
+                      {isDragOver 
+                        ? 'Drop images here to upload' 
+                        : 'Drag and drop images here, or click to browse'
+                      }
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isLoading}
+                    >
+                      Select Images
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                  </div>
+                  <div className="text-xs text-muted-foreground text-center mt-2">
+                    Max 10MB per image. Supports PNG, JPG, GIF, WebP
+                  </div>
+                </div>
+                
+                {/* Screenshot previews */}
+                {screenshots.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Screenshots ({screenshots.length})
+                    </Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {screenshots.map((file, index) => (
+                        <div key={index} className="relative group">
+                          <div className="aspect-square bg-muted rounded-lg overflow-hidden border">
+                            <img
+                              src={previewUrls[index]}
+                              alt={`Screenshot ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center space-x-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-8 w-8 p-0 bg-white/90 hover:bg-white"
+                              onClick={() => openPreview(previewUrls[index])}
+                              disabled={isLoading}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-8 w-8 p-0 bg-white/90 hover:bg-white text-red-600"
+                              onClick={() => removeScreenshot(index)}
+                              disabled={isLoading}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="absolute bottom-1 left-1 right-1">
+                            <div className="text-xs text-white bg-black/70 px-2 py-1 rounded truncate">
+                              {file.name}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="useAI"
@@ -516,4 +956,7 @@ export default function TranslationKeyForm({ onKeyAdded }: TranslationKeyFormPro
       )}
     </div>
   )
-}
+})
+
+TranslationKeyForm.displayName = 'TranslationKeyForm'
+export default TranslationKeyForm
