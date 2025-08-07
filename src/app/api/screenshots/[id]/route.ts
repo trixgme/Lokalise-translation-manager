@@ -4,10 +4,11 @@ import { createLokaliseClient } from '@/lib/lokalise'
 // 특정 스크린샷 조회
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const screenshotId = parseInt(params.id)
+    const { id } = await params
+    const screenshotId = parseInt(id)
     
     if (isNaN(screenshotId)) {
       return NextResponse.json(
@@ -40,10 +41,11 @@ export async function GET(
 // 스크린샷 삭제
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const screenshotId = parseInt(params.id)
+    const { id } = await params
+    const screenshotId = parseInt(id)
     
     if (isNaN(screenshotId)) {
       return NextResponse.json(

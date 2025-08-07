@@ -10,7 +10,8 @@
       "Bash(npm run lint)",
       "Bash(curl:*)",
       "WebFetch(domain:developers.lokalise.com)",
-      "WebFetch(domain:lokalise.github.io)"
+      "WebFetch(domain:lokalise.github.io)",
+      "Bash(find:*)"
     ],
     "deny": []
   }
