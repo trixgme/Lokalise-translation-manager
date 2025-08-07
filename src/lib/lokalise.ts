@@ -50,11 +50,41 @@ class LokaliseAPI {
   }
 
   async createKeys(keysData: CreateKeyRequest): Promise<LokaliseKey[]> {
+    console.log('=== createKeys called ===')
+    console.log('Original keysData:', JSON.stringify(keysData, null, 2))
+    
+    // Transform keysData to match Lokalise API format
+    const transformedKeysData = {
+      keys: keysData.keys.map(key => {
+        console.log(`Processing key: ${key.key_name}`)
+        console.log(`Platforms: ${key.platforms?.join(', ') || 'default'}`)
+        
+        const platforms = key.platforms || ['web', 'ios', 'android']
+        
+        const transformedKey = {
+          key_name: key.key_name, // Keep as string - Lokalise API requirement
+          description: key.description || '',
+          platforms: platforms,
+          tags: key.tags || [],
+          translations: key.translations || []
+        }
+        
+        console.log('Transformed key:', JSON.stringify(transformedKey, null, 2))
+        return transformedKey
+      })
+    }
+    
+    console.log('Final request to Lokalise API:', JSON.stringify(transformedKeysData, null, 2))
+    
     const response = await axios.post(
       `${LOKALISE_API_BASE}/projects/${this.projectId}/keys`,
-      keysData,
+      transformedKeysData,
       { headers: this.getHeaders() }
     )
+    
+    console.log('Lokalise API response:', response.status, response.statusText)
+    console.log('Response data:', JSON.stringify(response.data, null, 2))
+    
     return response.data.keys
   }
 
