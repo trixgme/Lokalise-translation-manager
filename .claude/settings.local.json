@@ -11,7 +11,10 @@
       "Bash(curl:*)",
       "WebFetch(domain:developers.lokalise.com)",
       "WebFetch(domain:lokalise.github.io)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebFetch(domain:platform.openai.com)",
+      "Bash(node:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

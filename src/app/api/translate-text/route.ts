@@ -3,7 +3,7 @@ import { batchTranslateWithOpenAI, getLanguageCode } from '@/lib/openai'
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, targetLanguages, gptModel = 'gpt-4.1' } = await request.json()
+    const { text, targetLanguages, gptModel = 'gpt-5' } = await request.json()
 
     console.log('=== Text Translation API called ===')
     console.log('Text to translate:', text)

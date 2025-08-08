@@ -16,6 +16,29 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Chrome 확장 프로그램 관련 에러 무시
+              window.addEventListener('error', function(e) {
+                if (e.filename && e.filename.includes('content.js')) {
+                  e.stopPropagation();
+                  return false;
+                }
+              });
+              
+              window.addEventListener('unhandledrejection', function(e) {
+                if (e.reason && e.reason.message && 
+                    e.reason.message.includes('message port closed')) {
+                  e.preventDefault();
+                  return false;
+                }
+              });
+            `
+          }}
+        />
+      </head>
       <body className={inter.className} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"

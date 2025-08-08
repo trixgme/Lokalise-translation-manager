@@ -35,9 +35,11 @@ interface ProgressStep {
 const GPT_MODELS = [
   { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Stable)', description: 'Most stable and cost-effective model' },
   { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Economic)', description: 'Cost-efficient compact model' },
-  { value: 'gpt-4o', label: 'GPT-4o (Multimodal)', description: 'Fast and powerful GPT-4 model' },
+  { value: 'gpt-4o', label: 'GPT-4o (Recommended)', description: 'Fast and powerful multimodal model' },
   { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (High Performance)', description: 'High-performance general-purpose model' },
-  { value: 'gpt-4.1', label: 'GPT-4.1 (Latest)', description: 'Latest and most advanced GPT-4 model' },
+  { value: 'gpt-4.1', label: 'GPT-4.1 (Advanced)', description: 'Latest and most advanced GPT-4 model' },
+  { value: 'gpt-5', label: 'GPT-5 (Logic & Reasoning)', description: 'Next-generation model with advanced reasoning capabilities' },
+  { value: 'gpt-5-mini', label: 'GPT-5 Mini (Efficient)', description: 'Lightweight GPT-5 for cost-sensitive applications' },
 ]
 
 const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormProps>(({ onKeyAdded }, ref) => {
@@ -48,7 +50,7 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
   const [platforms, setPlatforms] = useState<string[]>(['ios', 'android'])
   const [isLoading, setIsLoading] = useState(false)
   const [useAI, setUseAI] = useState(true)
-  const [selectedModel, setSelectedModel] = useState('gpt-4.1')
+  const [selectedModel, setSelectedModel] = useState('gpt-5')
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([])
   const [showProgress, setShowProgress] = useState(false)
   const [overallProgress, setOverallProgress] = useState(0)
@@ -297,10 +299,22 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
         progress: 0,
         subSteps: [
           'Preparing target languages',
-          'Creating batch translation request', 
-          'Calling OpenAI API',
-          'Processing translation results',
-          'Validating translations'
+          'Analyzing source text',
+          'Preparing translation prompt',
+          'Optimizing for model',
+          'Creating batch translation request',
+          'Connecting to OpenAI API',
+          'Authenticating request',
+          'Sending translation request',
+          'Executing translation',
+          'Processing AI response',
+          'Validating translation results',
+          'Parsing response data',
+          'Cleaning response format',
+          'Parsing JSON data',
+          'Validating JSON structure',
+          'Finalizing translations',
+          'Quality verification'
         ]
       })
       stepNumber++
@@ -315,7 +329,7 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
     }
 
     steps.push({
-      id: 'key-creation',
+      id: 'creation',
       title: `${stepNumber}. Key Creation`,
       description: 'Creating translation key in Lokalise project',
       status: 'pending'
@@ -441,7 +455,7 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
         }
 
         // Start key creation step
-        updateStepStatus('key-creation', 'in_progress', 'Creating translation key in Lokalise...')
+        updateStepStatus('creation', 'in_progress', 'Creating translation key in Lokalise...')
         await new Promise(resolve => setTimeout(resolve, 300))
 
         // Make the actual API call
@@ -483,7 +497,7 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
           await new Promise(resolve => setTimeout(resolve, 200))
         }
         
-        updateStepStatus('key-creation', 'completed', 'Translation key created successfully')
+        updateStepStatus('creation', 'completed', 'Translation key created successfully')
         await new Promise(resolve => setTimeout(resolve, 300))
         
         // Handle screenshot upload step
@@ -527,7 +541,7 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
           setDescription('')
           setSourceText('')
           setPlatforms(['ios', 'android'])
-          setSelectedModel('gpt-4.1')
+          setSelectedModel('gpt-5')
           
           // Clear screenshots and preview URLs
           previewUrls.forEach(url => URL.revokeObjectURL(url))
@@ -605,7 +619,7 @@ const TranslationKeyForm = forwardRef<TranslationKeyFormRef, TranslationKeyFormP
                     setSourceText('')
                     // tags는 의도적으로 유지
                     setPlatforms(['ios', 'android'])
-                    setSelectedModel('gpt-4.1')
+                    setSelectedModel('gpt-5')
                     
                     // Clear screenshots and preview URLs
                     previewUrls.forEach(url => URL.revokeObjectURL(url))

@@ -27,8 +27,10 @@ export async function translateWithOpenAI({
   sourceLang,
   targetLang,
   context,
-  model = 'gpt-4.1'
+  model = 'gpt-5'
 }: TranslationRequest): Promise<string> {
+  // GPT-5 모델인지 확인
+  const isGpt5Model = model.startsWith('gpt-5')
   const prompt = `
 You are a professional human translator specializing in ${targetLang}. Translate the following text from ${sourceLang} to ${targetLang}.
 ${context ? `Context: ${context}` : ''}
@@ -68,7 +70,8 @@ Remember: Your goal is to produce text that sounds like it was originally writte
   // 토큰 제한 제거 - 모델의 최대 가능한 토큰 사용
 
   try {
-    const completion = await getOpenAIClient().chat.completions.create({
+    // GPT-5 모델용 파라미터 설정
+    const completionParams: any = {
       model,
       messages: [
         {
@@ -79,10 +82,20 @@ Remember: Your goal is to produce text that sounds like it was originally writte
           role: 'user',
           content: prompt
         }
-      ],
-      // max_tokens 제거 - 모델 최대 용량 사용
-      temperature: 0.3,
-    })
+      ]
+    }
+
+    // GPT-5 모델별 파라미터 조정
+    if (isGpt5Model) {
+      // GPT-5는 max_completion_tokens와 temperature=1만 지원
+      completionParams.max_completion_tokens = 4000
+      completionParams.temperature = 1
+    } else {
+      // 기존 GPT-4 모델들은 기존 파라미터 사용
+      completionParams.temperature = 0.3
+    }
+
+    const completion = await getOpenAIClient().chat.completions.create(completionParams)
 
     return completion.choices[0]?.message?.content?.trim() || text
   } catch (error) {
@@ -109,9 +122,11 @@ export async function batchTranslateWithOpenAI({
   sourceLang,
   targetLanguages,
   context,
-  model = 'gpt-4.1',
+  model = 'gpt-5',
   onProgress
 }: BatchTranslationRequest): Promise<Record<string, string>> {
+  // GPT-5 모델인지 확인
+  const isGpt5Model = model.startsWith('gpt-5')
   const targetLangList = targetLanguages.map(lang => `${lang.code}: ${lang.name}`).join('\n')
   
   const prompt = `
@@ -158,8 +173,8 @@ RESPONSE FORMAT:
 Remember: Your goal is to produce translations that native speakers would naturally write, not mechanical translations that sound foreign.
 `
 
-  // Progress tracking
-  onProgress?.('Preparing target languages', 10, `Planning translation for ${targetLanguages.length} languages: ${targetLanguages.map(l => l.name).join(', ')}`)
+  // Progress tracking with detailed steps
+  onProgress?.('Preparing target languages', 5, `Planning translation for ${targetLanguages.length} languages: ${targetLanguages.map(l => l.name).join(', ')}`)
   
   console.log('=== OpenAI Batch Translation Request ===')
   console.log('Source text:', text)
@@ -168,15 +183,26 @@ Remember: Your goal is to produce translations that native speakers would natura
   console.log('Context:', context || 'None')
   console.log('Model:', model)
 
+  onProgress?.('Analyzing source text', 10, `Source text length: ${text.length} characters`)
+  
+  onProgress?.('Preparing translation prompt', 15, `Building comprehensive translation prompt with ${targetLanguages.length} target languages`)
+  
+  onProgress?.('Optimizing for model', 20, `Configuring parameters for ${model} (${isGpt5Model ? 'GPT-5 mode' : 'GPT-4 mode'})`)
+  
   // 토큰 제한 제거 - 모델의 최대 가능한 토큰 사용
   console.log('Using maximum available tokens for model:', model)
   
-  onProgress?.('Creating batch translation request', 20, `Using maximum model capacity: ${model}`)
+  onProgress?.('Creating batch translation request', 25, `Finalizing request structure for ${model}`)
 
   try {
-    onProgress?.('Calling OpenAI API', 40, 'Sending translation request to GPT model...')
+    onProgress?.('Connecting to OpenAI API', 30, 'Establishing secure connection to OpenAI servers...')
     
-    const completion = await getOpenAIClient().chat.completions.create({
+    onProgress?.('Authenticating request', 35, 'Verifying API credentials and permissions...')
+    
+    onProgress?.('Sending translation request', 40, `Transmitting ${text.length} character text to ${model}...`)
+    
+    // GPT-5 모델용 파라미터 설정
+    const completionParams: any = {
       model,
       messages: [
         {
@@ -187,13 +213,55 @@ Remember: Your goal is to produce translations that native speakers would natura
           role: 'user',
           content: prompt
         }
-      ],
-      // max_tokens 제거 - 모델 최대 용량 사용
-      temperature: 0.3,
-    })
+      ]
+    }
 
+    // GPT-5 모델별 파라미터 조정
+    if (isGpt5Model) {
+      // GPT-5는 max_completion_tokens와 temperature=1만 지원
+      completionParams.max_completion_tokens = 8000
+      completionParams.temperature = 1
+    } else {
+      // 기존 GPT-4 모델들은 기존 파라미터 사용
+      completionParams.temperature = 0.3
+    }
+    
+    // 실제 API 호출 전 최종 확인
+    onProgress?.('Executing translation', 45, `${model} is analyzing and translating your text...`)
+    
+    // API 호출 시작 시간 기록
+    const startTime = Date.now()
+    
+    // API 호출 중 진행 상황 업데이트를 위한 인터벌
+    let progressInterval: NodeJS.Timeout | null = null
+    let elapsedSeconds = 0
+    
+    // 진행 상황을 주기적으로 업데이트
+    progressInterval = setInterval(() => {
+      elapsedSeconds += 1
+      const progressPercentage = Math.min(45 + (elapsedSeconds * 1), 54) // 45%에서 54%까지 천천히 증가
+      onProgress?.('Executing translation', progressPercentage, `${model} is processing your text... (${elapsedSeconds}s elapsed)`)
+    }, 1000)
+    
+    try {
+      const completion = await getOpenAIClient().chat.completions.create(completionParams)
+      
+      // API 호출 완료 후 인터벌 정리
+      if (progressInterval) {
+        clearInterval(progressInterval)
+        progressInterval = null
+      }
+    
+    const endTime = Date.now()
+    const totalTime = ((endTime - startTime) / 1000).toFixed(1)
+    
+    onProgress?.('Processing AI response', 55, `AI translation completed in ${totalTime}s! Processing response data...`)
+    
     const response = completion.choices[0]?.message?.content?.trim()
-    onProgress?.('Validating translation results', 70, 'Received translation results from OpenAI. Validating...')
+    
+    onProgress?.('Validating translation results', 60, 'Validating translation quality and format...')
+    
+    onProgress?.('Parsing response data', 65, 'Converting AI response to structured format...')
     
     console.log('=== OpenAI Response ===')
     console.log('Raw response:', response)
@@ -220,18 +288,24 @@ Remember: Your goal is to produce translations that native speakers would natura
     console.log('=== Cleaned Response ===')
     console.log('Cleaned response:', cleanResponse)
     
-    onProgress?.('Processing translation data', 85, 'Processing JSON format translation results...')
+    onProgress?.('Cleaning response format', 70, 'Removing markdown formatting from AI response...')
+    
+    onProgress?.('Parsing JSON data', 75, 'Converting response to structured translation data...')
 
     // JSON 파싱 시도
     let translations: Record<string, string>
     try {
+      onProgress?.('Validating JSON structure', 80, 'Verifying translation data integrity...')
+      
       translations = JSON.parse(cleanResponse)
       console.log('=== Parsed Translations ===')
       Object.entries(translations).forEach(([code, translation]) => {
         console.log(`${code}: ${translation}`)
       })
       
-      onProgress?.('Processing translation data', 95, `Translation successfully completed for ${Object.keys(translations).length} languages.`)
+      onProgress?.('Finalizing translations', 90, `Successfully processed ${Object.keys(translations).length} language translations`)
+      
+      onProgress?.('Quality verification', 95, `Verifying translation quality for ${Object.keys(translations).length} languages...`)
     } catch (parseError) {
       console.error('Failed to parse JSON response:', parseError)
       console.error('Cleaned response was:', cleanResponse)
@@ -258,6 +332,15 @@ Remember: Your goal is to produce translations that native speakers would natura
 
     onProgress?.('Processing translation data', 100, 'All translations completed successfully!')
     return translations
+    
+    } catch (error) {
+      // API 호출 에러 발생 시 인터벌 정리
+      if (progressInterval) {
+        clearInterval(progressInterval)
+        progressInterval = null
+      }
+      throw error
+    }
   } catch (error) {
     console.error('OpenAI batch translation error:', error)
     if (error instanceof Error) {

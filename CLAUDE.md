@@ -55,7 +55,7 @@ This is a Next.js 15 application that integrates with Lokalise API for translati
 The application uses a hybrid translation approach:
 
 1. **Primary**: Lokalise AI auto-translation via `translateKeys()`
-2. **Fallback**: OpenAI GPT-4.1 when Lokalise AI fails
+2. **Fallback**: OpenAI GPT-5 (default model: GPT-5) when Lokalise AI fails
 3. **Manual**: Direct translation updates via `updateTranslation()`
 
 Key API endpoints:

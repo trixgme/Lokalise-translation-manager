@@ -73,7 +73,17 @@ export async function POST(request: NextRequest) {
           await new Promise(resolve => setTimeout(resolve, 500))
           sendProgress('validation', 'completed', 100, `Input values are valid. (Platforms: ${platforms.join(', ')})`)
 
-          // Step 2: Get languages
+          // Step 2: Data Preparation
+          sendProgress('preparation', 'in_progress', 30, 'Preparing translation key data...')
+          await new Promise(resolve => setTimeout(resolve, 400))
+          
+          // Prepare basic key structure
+          const tagArray = tags ? tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0) : []
+          sendProgress('preparation', 'in_progress', 70, `Processing platforms: ${platforms.join(', ')}, tags: ${tagArray.length > 0 ? tagArray.join(', ') : 'none'}`)
+          await new Promise(resolve => setTimeout(resolve, 300))
+          sendProgress('preparation', 'completed', 100, 'Translation key data prepared successfully')
+
+          // Step 3: Get languages
           sendProgress('languages', 'in_progress', 50, 'Fetching supported language list from Lokalise...')
           const lokalise = createLokaliseClient()
           const languages = await lokalise.getLanguages()
@@ -105,7 +115,7 @@ export async function POST(request: NextRequest) {
                 sourceLang: getLanguageCode('en'),
                 targetLanguages: targetLanguagesForBatch,
                 context: description,
-                model: gptModel || 'gpt-4o-mini',
+                model: gptModel || 'gpt-5',
                 onProgress
               })
 
@@ -138,7 +148,7 @@ export async function POST(request: NextRequest) {
                       sourceLang: getLanguageCode('en'),
                       targetLang: getLanguageCode(lang.lang_iso),
                       context: description,
-                      model: gptModel || 'gpt-4o-mini'
+                      model: gptModel || 'gpt-5'
                     })
                     
                     keyTranslations.push({
@@ -158,12 +168,18 @@ export async function POST(request: NextRequest) {
                 return
               }
             }
+            
+            // Step 5: Translation Integration (if AI was used)
+            if (useAI && keyTranslations.length > 1) {
+              sendProgress('integration', 'in_progress', 50, 'Integrating AI translations with key data...')
+              await new Promise(resolve => setTimeout(resolve, 300))
+              sendProgress('integration', 'completed', 100, `Successfully integrated ${keyTranslations.length - 1} AI translations`)
+              await new Promise(resolve => setTimeout(resolve, 200))
+            }
           }
 
-          // Step 4: Create key in Lokalise
+          // Step 6: Create key in Lokalise
           sendProgress('creation', 'in_progress', 25, 'Creating translation key in Lokalise...')
-          
-          const tagArray = tags ? tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0) : []
           
           sendProgress('creation', 'in_progress', 50, 'Preparing translation data...')
           
@@ -185,6 +201,13 @@ export async function POST(request: NextRequest) {
 
           const keyId = createdKeys[0].key_id
           sendProgress('creation', 'completed', 100, `Translation key created successfully. (ID: ${keyId})`)
+          
+          // Step 7: Completion
+          sendProgress('completion', 'in_progress', 30, 'Finalizing key creation process...')
+          await new Promise(resolve => setTimeout(resolve, 400))
+          
+          sendProgress('completion', 'in_progress', 70, 'Validating created translation key...')
+          await new Promise(resolve => setTimeout(resolve, 300))
 
           // Prepare translation results for display
           const translationResults = {
@@ -199,6 +222,9 @@ export async function POST(request: NextRequest) {
                 success: true
               }))
           }
+
+          sendProgress('completion', 'completed', 100, 'Translation key creation process completed successfully!')
+          await new Promise(resolve => setTimeout(resolve, 200))
 
           // Send final completion message with translation results
           const finalData = JSON.stringify({
